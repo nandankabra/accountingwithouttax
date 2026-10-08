@@ -1,0 +1,6 @@
+[Unit]
+Description=Record a critical Simple Books backup failure alert
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/logger --priority daemon.crit --tag simplebooks-backup Backup failed. Inspect simplebooks-backup.service and verify the last successful restore point.

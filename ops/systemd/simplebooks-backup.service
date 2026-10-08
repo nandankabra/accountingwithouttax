@@ -1,0 +1,20 @@
+[Unit]
+Description=Encrypted full backup of Simple Books
+After=network-online.target
+Wants=network-online.target
+OnFailure=simplebooks-backup-alert.service
+
+[Service]
+Type=oneshot
+User=simplebooks-backup
+Group=simplebooks-backup
+WorkingDirectory=/srv/simplebooks
+EnvironmentFile=/etc/simplebooks/backup.env
+ExecStart=/srv/simplebooks/.venv/bin/python /srv/simplebooks/scripts/backup.py create
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/backups/simplebooks
+

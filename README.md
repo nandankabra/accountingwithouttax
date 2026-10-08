@@ -1,4 +1,4 @@
-# Simple Books — first working development milestone
+# Simple Books — accounting development build
 
 A local, responsive accounting app based on `Simple_Accounting_System_NFR_Report.md`. Built on Django 5.2, PostgreSQL, and browser JavaScript, with one authoritative posting service shared by its web screens and JSON endpoints.
 
@@ -35,16 +35,20 @@ The browser opened during implementation is signed into this synthetic demo. Cre
 
 ## Working now
 
-- Single-owner signup, Argon2 password hashing, session login/logout, CSRF protection, configurable idle expiry, workspace-scoped access.
+- Single-owner signup, Argon2 hashing, session login/logout, CSRF protection, configurable idle expiry and workspace-scoped access.
+- Password change, single-use email reset links and shared PostgreSQL login/reset throttling. Development reset emails stay on this machine.
 - Dashboard with period summaries for all six voucher types; cash/bank, customer, supplier and stock balances.
 - Account and item creation, INR values, quantities to 3 decimal places.
+- Editable opening account and stock balances, with automatic balancing equity and retained revisions.
 - Payment, receipt, sales, purchase, item-wise credit notes and debit notes.
 - Atomic balanced posting; server totals compared with submitted exact-decimal totals; UUID identities and per-type numbering.
 - Perpetual stock accounting, moving weighted average, negative-stock blocking.
 - Referenced returns, backdated recalculation, version-checked posted edits, linked reversal vouchers.
 - Database-protected append-only audit events, revisions, calculation snapshots and idempotency records.
-- Ledger and stock books with period opening/closing values, pagination and source-voucher links. Vouchers have search, type filter and date sorting.
-- Ledger CSV export with period, organisation, user and generation metadata, capped at 5,000 entries.
+- Ledger and stock books with period opening/closing values, pagination and source-voucher links. Vouchers have search, type filter and date sorting; books have movement search, direction filters and date sorting.
+- Paginated accounts/items and server-searchable selectors; drafts and corrections resolve selected masters beyond the first page.
+- Ledger, inventory and item-wise voucher CSV exports with period, organisation, user and generation metadata, capped at 5,000 rows.
+- Encrypted full-backup, authentication and safe restore tooling; daily Linux scheduling templates.
 - Browser-local voucher drafts and exact-payload retry after uncertain submissions. Posting requires a connection.
 
 ## Validation
@@ -62,7 +66,8 @@ See [verification](docs/VERIFICATION.md), [architecture and accounting rules](do
 
 ## Key limitations
 
-Opening balances, value-only adjustments, PDF/other exports, native clients, backup automation, disaster recovery, monitoring, production identity operations and load testing are not implemented. Do not migrate existing live books into this build. Whole-workspace replay prioritizes correctness during this milestone but is not a validated strategy for large histories; incremental checkpoints and representative load tests are required before scaling claims.
+Value-only adjustments, PDF/other exports, native clients and production operation remain unfinished. Encrypted full backups and a local restore are verified; continuous WAL/PITR, off-host storage and alert delivery still need deployment and recovery drills. Whole-workspace replay retains all calculation snapshots and grows quadratically in storage; representative history benchmarks and checkpoints are required before scaling claims.
 
-Desktop/mobile native applications and 1,000 simultaneous users remain release requirements. The current app does not claim either. Production configuration forces HTTPS/secure cookies and requires an external secret, but production hosting, a non-owner runtime database role, distributed rate limiting and security review are still needed.
-# accountingwithouttax
+A synthetic 1,000-user HTTPS workload is available through `scripts/loadtest.py`; see the exact results and limits in [verification](docs/VERIFICATION.md). It uses pre-issued sessions and very small books, so production capacity remains unverified. Production configuration requires HTTPS, an external secret and SMTP recovery configuration. Production hosting, restricted database roles, security review and the required native clients remain release gates.
+
+See [backup and account-security operations](docs/OPERATIONS.md) for commands and remaining recovery work.

@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q, DecimalField
@@ -23,12 +22,13 @@ from .forms import SignupForm, LoginForm
 from .models import Workspace, Account, Item, Voucher, JournalEntry, StockMovement, AuditEvent
 from .engine import PostingError
 from .services import create_workspace, mutate, serialize
+from .security import login_allowed,clear_login_limit
 
 
 def audit_auth(request, action, user):
     ws = Workspace.objects.filter(owner=user).first()
     if ws:
-        AuditEvent.objects.create(workspace=ws, actor=user, action=action, details={})
+        AuditEvent.objects.create(workspace=ws, actor=user if request.user.is_authenticated else None, action=action, details={'account':user.username})
 
 
 def auth_page(request, signup=False):
@@ -37,15 +37,15 @@ def auth_page(request, signup=False):
     form = SignupForm(request.POST or None) if signup else LoginForm(request, data=request.POST or None)
     if request.method == 'POST':
         name = request.POST.get('username','').lower()
-        key = 'auth:' + hashlib.sha256((request.META.get('REMOTE_ADDR','') + ':' + name).encode()).hexdigest()
-        attempts = cache.get(key, 0)
-        if attempts >= 10:
+        if not login_allowed(request,name):
             form.add_error(None, 'Too many attempts. Please wait 15 minutes before trying again.')
         elif form.is_valid():
             if signup:
                 try:
                     with transaction.atomic():
                         user = form.save()
+                        user.email=user.username
+                        user.save(update_fields=['email'])
                         create_workspace(user, form.cleaned_data['business'])
                 except IntegrityError:
                     form.add_error('username', 'This email is already registered.')
@@ -54,10 +54,9 @@ def auth_page(request, signup=False):
                 user = form.get_user()
             login(request, user)
             audit_auth(request, 'auth.login', user)
-            cache.delete(key)
+            clear_login_limit(name)
             return redirect('/')
         else:
-            cache.set(key, attempts + 1, 900)
             user = User.objects.filter(username=name).first()
             if user:
                 audit_auth(request, 'auth.failed', user)
@@ -138,11 +137,41 @@ def owned_id(value, model, workspace, label):
 @api()
 def bootstrap(request):
     ws = request.workspace
-    return JsonResponse({'workspace': {'id': str(ws.id), 'name': ws.name, 'timezone': ws.timezone}, 'user': request.user.username, 'today': timezone.localdate().isoformat(), 'accounts': list(Account.objects.filter(workspace=ws).order_by('name').values('id','name','kind','code')), 'items': list(Item.objects.filter(workspace=ws).order_by('name').values('id','name','unit'))})
+    accounts=Account.objects.filter(workspace=ws).order_by('name','id')
+    items=Item.objects.filter(workspace=ws).order_by('name','id')
+    return JsonResponse({'workspace': {'id': str(ws.id), 'name': ws.name, 'timezone': ws.timezone}, 'user': request.user.username, 'today': timezone.localdate().isoformat(), 'accounts': list(accounts.values('id','name','kind','code')[:25]), 'items': list(items.values('id','name','unit')[:25]), 'default_cash':accounts.filter(kind='cash').values('id','name','kind','code').first()})
 
 
-@api(('POST',))
+def master_list(request,collection):
+    if collection not in ('accounts','items'):
+        raise PostingError('Not found.',status=404)
+    model=Account if collection=='accounts' else Item
+    query=model.objects.filter(workspace=request.workspace)
+    fields=['id','name','kind','code'] if collection=='accounts' else ['id','name','unit']
+    if 'ids' in request.GET:
+        values=request.GET['ids'].split(',')
+        if len(values)>200:raise PostingError('Look up at most 200 masters at once.')
+        try:keys=[uuid.UUID(value) for value in values]
+        except ValueError:raise PostingError('Use valid master identifiers.')
+        return JsonResponse({'rows':list(query.filter(pk__in=keys).order_by('name','id').values(*fields))})
+    search=request.GET.get('q','').strip()
+    if len(search)>120:raise PostingError('Search must be at most 120 characters.','q')
+    if search:query=query.filter(name__icontains=search)
+    kinds=request.GET.get('kinds','')
+    if kinds and collection=='accounts':
+        kinds=kinds.split(',')
+        if any(kind not in dict(Account.KINDS) for kind in kinds):raise PostingError('Select valid account groups.')
+        query=query.filter(kind__in=kinds)
+    if collection=='accounts' and request.GET.get('non_system')=='1':query=query.filter(code__isnull=True)
+    sort=request.GET.get('sort','name')
+    if sort not in ('name','name-desc'):raise PostingError('Choose a valid sort order.','sort')
+    query=query.order_by('name' if sort=='name' else '-name','id')
+    return JsonResponse(page_of(request,query,lambda row:{key:str(getattr(row,key)) if key=='id' else getattr(row,key) for key in fields}))
+
+
+@api(('GET','POST'))
 def master_create(request, collection):
+    if request.method=='GET':return master_list(request,collection)
     if collection not in ('accounts','items'):
         raise PostingError('Not found.', status=404)
     data = request.payload
@@ -247,7 +276,7 @@ def ledger(request):
     account,start,end,query,opening = ledger_query(request)
     rows = query.filter(date__range=(start,end)).select_related('voucher','account').order_by('date','id')
     totals = rows.aggregate(d=Sum('debit'),c=Sum('credit'))
-    result = page_of(request, rows, lambda r: {'id':r.id,'date':r.date,'voucher':str(r.voucher_id),'number':r.voucher.number,'account':r.account.name,'debit':r.debit,'credit':r.credit})
+    result = page_of(request, book_rows(request,rows), lambda r: {'id':r.id,'date':r.date,'voucher':str(r.voucher_id),'number':r.voucher.number,'account':r.account.name,'debit':r.debit,'credit':r.credit})
     result.update(opening=opening, debit=totals['d'] or 0, credit=totals['c'] or 0, closing=opening+(totals['d'] or 0)-(totals['c'] or 0), account=account.name)
     return JsonResponse(result)
 
@@ -255,9 +284,29 @@ def ledger(request):
 @api()
 def inventory(request):
     item,start,end,query,opening,closing=inventory_query(request)
-    result = page_of(request, query.filter(date__range=(start,end)).select_related('voucher').order_by('date','id'), lambda r: {'date':r.date,'voucher':str(r.voucher_id),'number':r.voucher.number,'quantity':r.quantity,'value':r.value,'balance_quantity':r.balance_quantity,'balance_value':r.balance_value})
+    result = page_of(request, book_rows(request,query.filter(date__range=(start,end))).select_related('voucher'), lambda r: {'date':r.date,'voucher':str(r.voucher_id),'number':r.voucher.number,'quantity':r.quantity,'value':r.value,'balance_quantity':r.balance_quantity,'balance_value':r.balance_value})
     result.update(opening=opening,closing=closing,item=item.name,unit=item.unit)
     return JsonResponse(result)
+
+
+def book_rows(request,query):
+    """Filter visible movements without changing the accounting-period totals."""
+    search=request.GET.get('q','').strip()
+    if len(search)>120:raise PostingError('Search must be at most 120 characters.','q')
+    if search:
+        parts=search.rsplit('-',1)
+        if len(parts)==2 and parts[0].upper() in dict(Voucher.TYPES) and parts[1].isdigit():
+            query=query.filter(voucher__kind=parts[0].upper(),voucher__sequence=int(parts[1]))
+        else:
+            query=query.filter(Q(voucher__data__narration__icontains=search)|Q(voucher__kind__icontains=search))
+    direction=request.GET.get('direction','')
+    allowed={'debit':'debit__gt','credit':'credit__gt'} if query.model is JournalEntry else {'inward':'quantity__gt','outward':'quantity__lt'}
+    if direction:
+        if direction not in allowed:raise PostingError('Choose a valid movement direction.','direction')
+        query=query.filter(**{allowed[direction]:0})
+    sort=request.GET.get('sort','oldest')
+    if sort not in ('oldest','newest'):raise PostingError('Choose a valid sort order.','sort')
+    return query.order_by(*(['date','id'] if sort=='oldest' else ['-date','-id']))
 
 
 def inventory_query(request):
@@ -271,7 +320,7 @@ def inventory_query(request):
 
 @api()
 def audit(request):
-    return JsonResponse(page_of(request, AuditEvent.objects.filter(workspace=request.workspace).select_related('actor').order_by('-id'), lambda r: {'action':r.action,'details':r.details,'at':r.created_at,'actor':r.actor.username}))
+    return JsonResponse(page_of(request, AuditEvent.objects.filter(workspace=request.workspace).select_related('actor').order_by('-id'), lambda r: {'action':r.action,'details':r.details,'at':r.created_at,'actor':r.actor.username if r.actor else 'Unauthenticated request'}))
 
 
 def csv_safe(value):
@@ -296,6 +345,13 @@ def ledger_export(request):
     rows = query.filter(date__range=(start,end)).select_related('voucher','account').order_by('date','id')
     if rows.count() > 5000:
         raise PostingError('Choose a smaller date range: exports are limited to 5,000 entries.')
+    selected_ids=set(book_rows(request,rows).values_list('id',flat=True))
+    records=[]
+    balance=opening
+    for row in rows:
+        balance+=row.debit-row.credit
+        if row.id in selected_ids:records.append((row,balance))
+    if request.GET.get('sort')=='newest':records.reverse()
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="ledger.csv"'
     response.write('\ufeff')
@@ -304,29 +360,30 @@ def ledger_export(request):
     writer.writerow(['Generated at',timezone.now().isoformat(),'Timezone',request.workspace.timezone])
     writer.writerow(['Period',str(start),str(end),'Account',csv_safe(account.name)])
     writer.writerow(['Opening (debit positive)',str(opening)])
+    writer.writerow(['Closing for full period (debit positive)',str(balance)])
+    writer.writerow(['Search',csv_safe(request.GET.get('q','')),'Direction',csv_safe(request.GET.get('direction','All')),'Sort',csv_safe(request.GET.get('sort','oldest'))])
     writer.writerow(['Date','Voucher ID','Voucher number','Account ID','Account','Debit INR','Credit INR','Balance INR'])
-    balance = opening
-    for r in rows.iterator(chunk_size=500):
-        balance += r.debit-r.credit
+    for r,balance in records:
         writer.writerow([r.date,str(r.voucher_id),r.voucher.number,str(r.account_id),csv_safe(r.account.name),str(r.debit),str(r.credit),str(balance)])
-    AuditEvent.objects.create(workspace=request.workspace,actor=request.user,action='ledger.exported',details={'account':str(account.id),'start':str(start),'end':str(end)})
+    AuditEvent.objects.create(workspace=request.workspace,actor=request.user,action='ledger.exported',details={'account':str(account.id),'start':str(start),'end':str(end),'q':request.GET.get('q',''),'direction':request.GET.get('direction',''),'sort':request.GET.get('sort','oldest')})
     return response
 
 
 @api()
 def inventory_export(request):
     item,start,end,query,opening,closing=inventory_query(request)
-    rows=query.filter(date__range=(start,end)).select_related('voucher').order_by('date','id')
+    rows=book_rows(request,query.filter(date__range=(start,end))).select_related('voucher')
     if rows.count()>5000:
         raise PostingError('Choose a smaller date range: exports are limited to 5,000 stock movements.')
     response,writer=csv_report(request,'inventory',start,end)
     writer.writerow(['Item ID',str(item.id),'Item',csv_safe(item.name),'Unit',csv_safe(item.unit)])
     writer.writerow(['Opening quantity',str(opening['quantity']),'Opening value INR',str(opening['value'])])
     writer.writerow(['Closing quantity',str(closing['quantity']),'Closing value INR',str(closing['value'])])
+    writer.writerow(['Search',csv_safe(request.GET.get('q','')),'Direction',csv_safe(request.GET.get('direction','All')),'Sort',csv_safe(request.GET.get('sort','oldest'))])
     writer.writerow(['Date','Voucher ID','Voucher number','Type','Quantity inward','Quantity outward','Value movement INR','Quantity balance','Value balance INR'])
     for row in rows.iterator(chunk_size=500):
         writer.writerow([row.date,str(row.voucher_id),row.voucher.number,row.voucher.kind,str(max(row.quantity,0)),str(max(-row.quantity,0)),str(row.value),str(row.balance_quantity),str(row.balance_value)])
-    AuditEvent.objects.create(workspace=request.workspace,actor=request.user,action='inventory.exported',details={'item':str(item.id),'start':str(start),'end':str(end)})
+    AuditEvent.objects.create(workspace=request.workspace,actor=request.user,action='inventory.exported',details={'item':str(item.id),'start':str(start),'end':str(end),'q':request.GET.get('q',''),'direction':request.GET.get('direction',''),'sort':request.GET.get('sort','oldest')})
     return response
 
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Simple Books full backup
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 Asia/Kolkata
+Persistent=true
+RandomizedDelaySec=60
+Unit=simplebooks-backup.service
+
+[Install]
+WantedBy=timers.target

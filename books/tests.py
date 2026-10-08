@@ -392,8 +392,9 @@ class ExportTests(Fixtures,TestCase):
         rows=self.parse_csv(self.client.get('/api/export/inventory.csv',{**self.period,'item':str(self.item.id)}))
         self.assertEqual(rows[4][1],'10.000')
         self.assertEqual(rows[5][1],'8.000')
-        self.assertEqual(rows[7][1],sale['id'])
-        self.assertEqual(rows[7][5],'2.000')
+        record=rows[next(i for i,row in enumerate(rows) if row and row[0]=='Date')+1]
+        self.assertEqual(record[1],sale['id'])
+        self.assertEqual(record[5],'2.000')
         self.assertTrue(AuditEvent.objects.filter(action='inventory.exported').exists())
 
     def test_export_text_cannot_be_a_spreadsheet_formula(self):

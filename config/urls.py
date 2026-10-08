@@ -1,7 +1,13 @@
 from django.urls import path
 from books import views
+from books import account_views
 
 urlpatterns = [
+    path('security/',account_views.ChangePassword.as_view()),
+    path('password-reset/',account_views.RequestPasswordReset.as_view(),name='password_reset'),
+    path('password-reset/sent/',account_views.reset_sent),
+    path('password-reset/confirm/<uidb64>/<token>/',account_views.ConfirmPasswordReset.as_view(),name='password_reset_confirm'),
+    path('password-reset/complete/',account_views.reset_complete),
     path('', views.home), path('login/', views.auth_page), path('signup/', views.auth_page, {'signup':True}), path('logout/',views.logout_page),
     path('api/bootstrap/',views.bootstrap), path('api/dashboard/',views.dashboard), path('api/opening/',views.opening),
     path('api/masters/<str:collection>/',views.master_create), path('api/vouchers/',views.vouchers),

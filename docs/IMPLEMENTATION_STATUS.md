@@ -1,30 +1,30 @@
-# Implementation status — 7 October 2026
+# Implementation status — 8 October 2026
 
-Status: **first working local development milestone; not approved for production**.
+**Working local development build. The complete report is not 100% implemented or accepted for production.**
 
-The original report remains authoritative for scope. The inventory policy was confirmed in conversation. Other proposed report defaults have not been represented as approved decisions.
+The source report is preserved. The owner confirmed perpetual inventory, moving weighted average and blocking negative stock. Numbering, quantity precision, return rounding, export formats and retention remain provisional/pending owner review.
 
-| Area | Current evidence | Remaining work |
+| Area | Implemented and locally verified | Remaining work |
 |---|---|---|
-| Platform | Responsive web app; Chrome desktop/mobile viewport review | macOS/Windows installable clients; native Android/iOS; full browser/device matrix |
-| Integrity | Six voucher types; balanced atomic posting; retries; tenant validation; server totals; edits/reversals | Opening balances; value-only adjustments; accounting-owner review and larger fixtures |
-| Inventory | Perpetual weighted-average; source-cost returns; negative-stock rejection; backdated replay | Agree units/precision/return rounding edge cases; improve replay performance |
-| Books/dashboard | Current-period summaries; dated ledger and stock opening/closing; drill-through; paginated books | More sort/search controls; receivable/payable ageing and settlement allocation if requested; independent widget failure isolation |
-| Security | Argon2; sessions; CSRF; ownership checks; CSP; append-only DB history; CSRF and IDOR tests | Password reset/change and recovery; shared/distributed login throttling; external audit; dependency scanning and release pipeline; least-privilege runtime DB user |
-| Audit | Login/logout/failed-login, masters, post/edit/reverse and ledger export events; immutable revisions/runs | Explicit rejected/deletion-attempt events, expanded security-event coverage, operator access policy |
-| Drafts | Workspace-scoped browser local storage; retry original payload/key when outcome uncertain | Multi-tab draft conflict UX; encrypted/native-device draft handling; network interruption acceptance matrix |
-| Exports | Ledger CSV with metadata and formula-injection neutralization for text | Owner format decision; voucher/inventory exports; PDF; import/round-trip acceptance fixtures |
-| Capacity | Two simultaneous posting tests on PostgreSQL | Representative history sizing; 1,000-user load test; p95 evidence; incremental replay/checkpoints; query profiling |
-| Recovery | Transaction rollback tested | Automated encrypted full backups + WAL archive, backup alerts, 15-minute RPO/4-hour RTO restore drills |
-| Operations | Versioned migrations, basic request IDs and timings; safe API errors | CI/CD, separate environments, health/metrics/alerts, queue monitoring, uptime and maintenance handling |
-| Retention | No application deletion of posted data/history | Accounting/audit/backup retention choices and storage/cost plan |
+| Platform | Responsive web app; Chrome desktop and 390-pixel viewport review | Installable macOS/Windows clients; native Android/iOS; latest-two-version browser and physical-device matrix |
+| Accounting integrity | Six voucher types; opening account/item balances; atomic balanced posting; exact totals; idempotency; stale edits; linked reversals; immutable history | Value-only adjustments; accounting-owner acceptance; representative large histories |
+| Inventory | Perpetual moving average; source-cost returns; negative-stock blocking; deterministic backdated replay; partial-return reversal regression | Approve units/precision/rounding policies; replace full-history materialization with checkpoints/affected-suffix calculations |
+| Books/dashboard | Period summaries; dated ledger/stock opening and closing; voucher drill-through; combined cash/bank ledger; paginated books/masters; searchable bounded form selectors; voucher and book search/filter/sort | Independent dashboard widget failure handling; complete field-adjacent validation and accessibility review |
+| Security | Argon2; sessions; CSRF; ownership checks; CSP; shared database login/reset throttling; password change; single-use reset; other-session invalidation | Real SMTP delivery; least-privilege production DB roles; external security review; dependency scan and release pipeline; proxy/log review |
+| Audit | Login/logout/failures; password change/reset; master/post/edit/reverse/export events; append-only DB triggers and revisions | Rejected-action/deletion-attempt coverage; operator access policy |
+| Drafts | Workspace-scoped browser drafts; recovered draft tested; exact-payload/key retry when outcome uncertain | Multi-tab draft conflicts; cross-device interruption matrix; native device storage |
+| Exports | Ledger, inventory and item-wise vouchers CSV; metadata; source IDs/status/version; formula neutralization; 5,000-row caps | Owner format decision; PDF/Excel if selected; import and round-trip acceptance fixtures |
+| Capacity | 1,000 synthetic authenticated users, 8,000 HTTPS requests, reconciliation checks; timing instrumentation and repeatable harness | Latency target acceptance; representative history and sustained/production tests; CPU/memory/connection monitoring and query profiling |
+| Recovery | Streaming encrypted full backup; authentication/tamper tests; separate local restore with matching financial tables; daily Linux timer/failure-log templates | Install production schedule; off-host storage and keys; delivered alerts; continuous WAL/PITR for 15-minute RPO; representative 4-hour RTO drill |
+| Operations | Versioned migrations; structured UTC request timestamps, routes, IDs and timings; production config checks | Staging/production environments; CI/CD; full health/metrics/alerts; availability evidence; maintenance workflow |
+| Retention | Posted accounting/history protected against application deletion; no backup pruning | Owner-approved accounting/audit/backup retention and storage plan |
 
-## Next implementation order
+## Next work
 
-1. Opening account/item balances with a balanced opening equity entry and historical reconciliation fixtures; confirm rounding/precision/return costing defaults with the owner.
-2. Harden the web workflow: shared login throttling, account recovery, master pagination, richer book filters, remaining exports, multi-tab draft conflicts and rejected-action auditing.
-3. Replace full-history materialization with tested affected-suffix calculations/checkpoints; size representative workloads, then run the full 1,000-user test.
-4. Establish deployment environments, runtime database permissions, encrypted backups/WAL archiving, restore drill, observability and release security checks.
-5. Build installable desktop and native mobile clients against the shared service, then cross-device retry and reconciliation tests.
+1. Profile queueing, TLS, sessions and posting under representative history; implement replay checkpoints with reconciliation fixtures.
+2. Finish web acceptance: value-only adjustments, field errors, draft conflicts and resilience.
+3. Establish staging deployment, restricted roles, off-host full backups plus WAL/PITR, monitoring and actual recovery exercises.
+4. Build and validate the required desktop and native mobile clients against the shared accounting service.
+5. Complete security, accessibility, device/browser and accounting-owner release acceptance.
 
-No public deployment, production database, backup retention policy, native-app release, or compliance claim was created in this milestone.
+Local tests and small-fixture recovery evidence do not establish monthly availability, production disaster recovery or cross-platform acceptance. See [verification](VERIFICATION.md) and [operations](OPERATIONS.md) for concrete evidence and its limits.

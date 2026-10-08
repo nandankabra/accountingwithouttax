@@ -1,10 +1,10 @@
-# Verification — 7 October 2026
+# Verification — updated 8 October 2026
 
 Environment: macOS, Python 3.14.4, Django 5.2.18, psycopg 3.3.6, dedicated local PostgreSQL cluster. All data used for review is synthetic.
 
 ## Automated evidence
 
-`python manage.py test books --noinput`: **23 tests passed**.
+`python manage.py test books --noinput`: **53 tests passed**.
 
 Covered scenarios:
 
@@ -15,12 +15,17 @@ Covered scenarios:
 - Injected failure during audit insertion rolls back the complete posting.
 - Backdated purchases and edited costs recalculate later COGS and stock, retaining old calculation runs and revisions.
 - Stale versions are rejected.
-- Partial returns use source cost, enforce original rates and quantities, and block a fractional-paise over-refund.
+- Partial returns use source cost, enforce original rates and quantities, and block fractional-paise settlement mismatches. Reversing an earlier partial return preserves already allocated cost/amount residuals.
 - Linked reversals preserve originals and are retry-safe. Sources with active returns cannot be reversed until returns are reversed.
 - Foreign workspace masters/vouchers/ledger/stock queries are rejected. Database trigger also rejects a foreign-account journal entry.
 - Append-only audit, revision, calculation, journal, movement and mutation rows reject both UPDATE and DELETE.
 - Report opening/closing balances and dashboard reversal totals agree with source fixtures.
-- CSV export includes generation metadata and logs the export.
+- Opening account and item balances balance through equity without sales/purchase turnover; date restrictions, same-day precedence, zero-cost stock, edit replay and rollback are tested.
+- Ledger, inventory and item-wise voucher CSV exports preserve metadata, IDs, versions and precision, neutralize textual spreadsheet formulas and enforce tenant isolation. Combined cash/bank drill-through reconciles.
+- Password change validates the old password and invalidates other sessions; reset is single-use, produces generic replies and revokes old sessions. Shared PostgreSQL throttles limit concurrent login/reset attempts.
+- Backup encryption round trips with fresh nonces; tampered ciphertext and wrong keys fail without leaving plaintext output; restore refuses source/system targets. Reset-token log redaction is tested.
+- Book filters preserve complete period totals; newest filtered ledger CSV includes intervening hidden movements in running balances. Inventory filters preserve closing stock and historical row balances.
+- Master bootstrap/pages are bounded; exact-ID lookup resolves masters beyond the first page and cannot expose another workspace.
 - Signup/login/logout, anonymous access, CSRF and response security headers.
 - Two concurrent identical requests produce one posting; two simultaneous sales cannot oversell available stock. These use actual PostgreSQL threads/connections, not SQLite.
 
@@ -29,6 +34,8 @@ Covered scenarios:
 `python manage.py makemigrations --check --dry-run`: no changes detected.
 
 `node --check books/static/books/app.js`: passed.
+
+`manage.py check --deploy`: no issues with explicit test production configuration (HTTPS origin, randomly generated secret, configured dummy SMTP hostname and sender). No SMTP connection or public deployment was performed.
 
 ## Browser review
 
@@ -43,10 +50,47 @@ Chrome on macOS, default desktop viewport and a 390 × 844 mobile viewport:
 - Posted a ₹480.00 sale from the recovered draft; stock value decreased by ₹333.33.
 - Reversed that sale through the explicit confirmation form; stock value returned to ₹70,200.00, with a separate linked REV record.
 - Fixed dashboard date-control wrapping and a mobile summary-card overflow. Rechecked document width = viewport width = 390 pixels on the dashboard.
-- Restored the normal browser viewport and left the demo dashboard open.
+- Added opening cash and cotton-bag stock, then corrected cash to ₹1,100 with a reason; version 2 and subsequent weighted costs were preserved.
+- Downloaded inventory CSV and checked opening stock, seven movements and the final reversal against closing 127 bags / ₹42,068.75.
+- Converted mobile tables into labelled rows; measured inventory document width 390 pixels and table content width 356 pixels without overflow. Mobile book summaries use two columns and a full-width closing balance.
+- Reviewed account-security navigation and the password-change form. Credentials were tested through isolated Django clients.
+- Searched the cash ledger for PAY-000003 and displayed only the ₹130.50 payment while full closing cash stayed ₹2,469.50. Downloaded its filtered CSV and verified one matching payment, ₹130.50 credit and full-period closing ₹2,469.50. Screenshot: `.runtime/book-search-desktop.jpg`.
+- Searched master names through the new server lookup and master-list controls.
+- Checked filtered ledger at 390 pixels: document width 390, table width 356; restored normal viewport and left the synthetic demo open.
+- Client asset hashes now change on CSS/JS updates so a cached older client is not loaded after a correction.
 
 The demo now includes these test transactions and their history; it is not intended as real business data.
 
+## Encrypted backup and restore
+
+On 7 October 2026, the local synthetic workspace was streamed into an encrypted full backup, authenticated and restored into a new database. It contained 12 vouchers, 14 revisions and 19 audit events. Complete-row fingerprints and counts matched across eight financial tables. Restore took 0.148 seconds for this small fixture. `.runtime/restore-evidence.json` retains the machine-readable result.
+
+This verifies local full-backup recovery. Daily Linux timer/failure-log templates are present but not installed. Off-host storage, independently recoverable keys, delivered alerts, continuous WAL/PITR, retention and representative RPO/RTO drills remain open.
+
+## Synthetic capacity evidence
+
+The repeatable harness runs a new database and a separate loopback HTTPS Gunicorn service, leaving the demo books untouched. Each of 1,000 independent workspaces starts with three vouchers and one item. Pre-issued authenticated sessions perform bootstrap, dashboard, voucher search, ledger, sale, duplicate retry, receipt and stock lookup. Users arrive over five seconds, with two-second think time between most actions. Login/password hashing, static assets, browser rendering and large histories are excluded.
+
+All three full runs completed 8,000 HTTP requests with zero request failures and zero wrong-workspace, duplicate, journal-balance or stock-value failures. Each ended with 5,000 vouchers and 5,000 mutation records. The latency targets **did not pass**.
+
+| Run | Worker/thread configuration | Peak requests in flight | Normal API p95 | Dashboard p95 | Ledger p95 | Posting p95 | Retry p95 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Initial | 4 Gunicorn gthread workers × 8 threads | 559 | 0.073 s | 0.006 s | 2.816 s | 3.033 s | 3.303 s |
+| Eight-worker comparison | 8 Gunicorn gthread workers × 8 threads | 612 | 1.127 s | 0.363 s | 3.539 s | 3.319 s | 3.438 s |
+| Instrumented repeat | 4 Gunicorn gthread workers × 8 threads | 791 | 3.364 s | 0.636 s | 7.841 s | 6.687 s | 7.315 s |
+
+The instrumented repeat measured application-handler p95 of 21.97 ms for posting and 6.19 ms for ledger, while client response times were much higher. The handler measurement excludes server queueing, TLS transport, outer session middleware and client scheduling. It indicates where to investigate; it does not establish the cause or replace end-to-end latency acceptance. More application workers alone did not resolve the target.
+
+Run the same test:
+
+```sh
+.venv/bin/python scripts/loadtest.py --users 1000 --workers 4 --threads 8 --think-seconds 2
+```
+
+Use `--users 10 --think-seconds 0.1` for harness smoke testing. A failed latency/reconciliation result exits nonzero. Private `.runtime/load_*/result.json` files retain metrics; test databases and owner-readable session/TLS fixtures are retained for diagnosis. No fixtures contain production credentials. The script limits worker threads to preserve the local database connection budget.
+
+The active-user counter includes arrivals waiting on the ramp/think timer. The separate in-flight count shows actual overlapping requests. This brief small-book workload is preliminary evidence, and requires agreed data volumes, sustained tests, deployment sizing and production monitoring before PERF requirements can be accepted.
+
 ## Not verified
 
-No 1,000-user or sustained performance test; no browser matrix beyond Chrome; no physical Android/iOS or Windows test; no native binaries; no backup/restore/RPO/RTO evidence; no full security/dependency audit; no full accessibility audit. No statement of NFR compliance is made. Mobile dashboard/form checks are not a substitute for a complete responsive book/table acceptance matrix.
+Native binaries; physical Android/iOS and Windows; latest-two-version browser matrix; representative-history or sustained production capacity; off-host WAL/PITR and production RPO/RTO; real SMTP and alert delivery; monthly availability; external security/dependency audit; full accessibility/usability acceptance. Owner approval of unresolved accounting/export/retention defaults remains outstanding. No statement of complete NFR compliance is made.

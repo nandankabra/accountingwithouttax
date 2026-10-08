@@ -12,6 +12,9 @@ SYSTEM_ACCOUNTS = [('inventory','Inventory','asset'), ('sales','Sales','income')
 
 @transaction.atomic
 def create_workspace(owner, name):
+    if not owner.email and '@' in owner.username:
+        owner.email=owner.username
+        owner.save(update_fields=['email'])
     ws = Workspace.objects.create(owner=owner, name=name)
     for code, label, kind in SYSTEM_ACCOUNTS:
         Account.objects.create(workspace=ws, name=label, kind=kind, code=code)
@@ -33,8 +36,16 @@ def mutate(owner, payload, key, voucher_id=None, reverse=False):
         raise PostingError('A valid idempotency key is required.')
     if not isinstance(payload, dict):
         raise PostingError('A JSON object is required.')
-    ws = Workspace.objects.select_for_update().get(owner=owner)
     fingerprint = hashlib.sha256(json.dumps([str(voucher_id), reverse, payload], sort_keys=True).encode()).hexdigest()
+    # Committed mutation rows are immutable. Resolve confirmed retries without
+    # waiting for an unrelated write in this workspace; recheck after locking
+    # when the original request may still be in flight.
+    prior = Mutation.objects.filter(workspace__owner=owner, key=key).first()
+    if prior:
+        if prior.fingerprint != fingerprint:
+            raise PostingError('This submission key was already used for different data. Review before submitting again.', status=409)
+        return {'id': str(prior.voucher_id), 'version': prior.version, 'duplicate': True}
+    ws = Workspace.objects.select_for_update().get(owner=owner)
     prior = Mutation.objects.filter(workspace=ws, key=key).first()
     if prior:
         if prior.fingerprint != fingerprint:

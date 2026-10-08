@@ -115,7 +115,13 @@ class Mutation(models.Model):
 
 class AuditEvent(models.Model):
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT)
-    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True)
     action = models.CharField(max_length=40)
     details = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class AuthThrottle(models.Model):
+    key = models.CharField(primary_key=True,max_length=64)
+    window_start = models.DateTimeField()
+    attempts = models.PositiveIntegerField(default=0)

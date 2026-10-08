@@ -2,6 +2,7 @@ import json
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 from django.http import JsonResponse
 
 logger = logging.getLogger('simplebooks')
@@ -22,11 +23,14 @@ class RequestMiddleware:
         if request.user.is_authenticated or request.path.startswith('/api/'):
             response['Cache-Control'] = 'no-store'
         if request.path.startswith('/api/'):
-            logger.info(json.dumps({'request_id': request.reference_id, 'method': request.method, 'status': response.status_code, 'duration_ms': round((time.monotonic()-start)*1000)}))
+            duration = round((time.monotonic()-start)*1000,2)
+            response['Server-Timing'] = f'app;dur={duration}'
+            route = request.resolver_match.route if request.resolver_match else 'unresolved'
+            logger.info(json.dumps({'timestamp':datetime.now(timezone.utc).isoformat(),'request_id': request.reference_id, 'route':route,'method': request.method, 'status': response.status_code, 'duration_ms': duration}))
         return response
 
     def process_exception(self, request, exception):
         if request.path.startswith('/api/'):
             # Do not log payloads, passwords, or exception strings containing SQL values.
-            logger.error(json.dumps({'request_id': request.reference_id, 'error_type': type(exception).__name__}))
+            logger.error(json.dumps({'timestamp':datetime.now(timezone.utc).isoformat(),'request_id': request.reference_id, 'error_type': type(exception).__name__}))
             return JsonResponse({'error': 'The request could not be completed. Your records were not partially posted.', 'reference_id': request.reference_id}, status=500)
