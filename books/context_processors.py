@@ -2,6 +2,7 @@
 from functools import lru_cache
 import hashlib
 from pathlib import Path
+from django.conf import settings
 
 ROOT=Path(__file__).resolve().parent/'static/books'
 
@@ -12,4 +13,4 @@ def digest(js_modified,css_modified):
 
 
 def assets(request):
-    return {'asset_version':digest((ROOT/'app.js').stat().st_mtime_ns,(ROOT/'app.css').stat().st_mtime_ns)}
+    return {'asset_version':digest((ROOT/'app.js').stat().st_mtime_ns,(ROOT/'app.css').stat().st_mtime_ns),'development':settings.DEBUG,'allow_self_signup':settings.ALLOW_SELF_SIGNUP}

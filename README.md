@@ -21,7 +21,7 @@ To stop the app, press Ctrl-C. To stop its database:
 pg_ctl -D .runtime/postgres stop
 ```
 
-For Windows or an existing PostgreSQL instance, create a dedicated empty `simplebooks` database, set the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` environment variables, then create a virtual environment, install `requirements.txt`, and run `python manage.py migrate` and `python manage.py runserver 127.0.0.1:8017`. The `.env.example` documents configuration; it is not automatically loaded. Windows execution remains unverified.
+For a Windows desktop demonstration see [client demo and installer instructions](docs/CLIENT_DEMO.md). For a Windows backend or an existing PostgreSQL instance, create a dedicated empty `simplebooks` database, set the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` environment variables, then create a virtual environment, install `requirements.txt`, and run `python manage.py migrate` and `python manage.py runserver 127.0.0.1:8017`. The `.env.example` documents configuration; it is not automatically loaded. Windows execution remains unverified.
 
 ## Try sample books
 
@@ -35,7 +35,12 @@ The browser opened during implementation is signed into this synthetic demo. Cre
 
 ## Working now
 
-- Single-owner signup, Argon2 hashing, session login/logout, CSRF protection, configurable idle expiry and workspace-scoped access.
+- One owner per company, provider administration, Argon2 hashing, session login/logout, CSRF protection, configurable idle expiry and workspace-scoped access.
+- Editable company name, mobile, company email, address, city and postal code; concurrent updates are checked.
+- Provider-created customers with passwords; plan prices/durations, trial/active/suspended status and manual subscription expiry/renewal. Expired access retains reading and exports.
+- PDF download and WhatsApp review/share controls for all eight voucher types. File attachment uses the device share sheet where supported or manual attachment in WhatsApp.
+- Voucher detail omits revision-history lists; protected accounting history remains in the database.
+- Windows x64 installer built locally for a connected desktop client; Windows runtime acceptance remains pending.
 - Password change, single-use email reset links and shared PostgreSQL login/reset throttling. Development reset emails stay on this machine.
 - Dashboard with period summaries for all six voucher types; cash/bank, customer, supplier and stock balances.
 - Account and item creation, INR values, quantities to 3 decimal places.
@@ -54,20 +59,18 @@ The browser opened during implementation is signed into this synthetic demo. Cre
 ## Validation
 
 ```sh
-.venv/bin/python manage.py test books --noinput
-.venv/bin/python manage.py check
-.venv/bin/python manage.py makemigrations --check --dry-run
-node --check books/static/books/app.js
+.venv/bin/python scripts/verify.py
+.venv/bin/python scripts/preview_vouchers.py
 ```
 
-Tests use a separate `test_simplebooks` database. The PostgreSQL test role must have permission to create and drop it. The development cluster meets this requirement.
+The development bootstrap installs `requirements-dev.txt`; a manually prepared test environment must install it too. Tests use a separate `test_simplebooks` database. The PostgreSQL test role must have permission to create and drop it. The development cluster meets this requirement.
 
 See [verification](docs/VERIFICATION.md), [architecture and accounting rules](docs/ARCHITECTURE.md), [API](docs/API.md), and [remaining work](docs/IMPLEMENTATION_STATUS.md).
 
 ## Key limitations
 
-Value-only adjustments, PDF/other exports, native clients and production operation remain unfinished. Encrypted full backups and a local restore are verified; continuous WAL/PITR, off-host storage and alert delivery still need deployment and recovery drills. Whole-workspace replay retains all calculation snapshots and grows quadratically in storage; representative history benchmarks and checkpoints are required before scaling claims.
+Value-only adjustments, offline accounting, automatic subscription billing, native mobile clients and production operation remain unfinished. The Windows package is unsigned and needs a reachable shared server plus acceptance on a Windows PC. Encrypted full backups and a local restore are verified; continuous WAL/PITR, off-host storage and alert delivery still need deployment and recovery drills. Whole-workspace replay retains all calculation snapshots and grows quadratically in storage; representative history benchmarks and checkpoints are required before scaling claims.
 
-A synthetic 1,000-user HTTPS workload is available through `scripts/loadtest.py`; see the exact results and limits in [verification](docs/VERIFICATION.md). It uses pre-issued sessions and very small books, so production capacity remains unverified. Production configuration requires HTTPS, an external secret and SMTP recovery configuration. Production hosting, restricted database roles, security review and the required native clients remain release gates.
+A synthetic 1,000-user HTTPS workload is available through `scripts/loadtest.py`; see the exact results and limits in [verification](docs/VERIFICATION.md). It uses pre-issued sessions and very small books, so production capacity remains unverified. Production configuration requires HTTPS, an external secret and SMTP recovery configuration. Production hosting, restricted database roles, security review, unresolved desktop build-tool advisories and cross-platform acceptance remain release gates. See the [delivery checklist](docs/RELEASE_CHECKLIST.md).
 
 See [backup and account-security operations](docs/OPERATIONS.md) for commands and remaining recovery work.

@@ -10,7 +10,8 @@ Same-origin Django session authentication. Sign up/sign in through `/signup/` or
 | GET | `/api/opening/` | Existing opening voucher or null |
 | GET | `/api/dashboard/` | Period totals and balances |
 | GET/POST | `/api/vouchers/` | Paginated list / post voucher |
-| GET/PUT | `/api/vouchers/<uuid>/` | Current data, history, journal / correction |
+| GET/PUT | `/api/vouchers/<uuid>/` | Current data, journal / correction |
+| GET | `/api/vouchers/<uuid>/pdf/` | Private voucher PDF download; logged |
 | POST | `/api/vouchers/<uuid>/reverse/` | Linked compensating voucher |
 | GET | `/api/ledger/?account=<uuid>` | Opening/closing and journal entries |
 | GET | `/api/inventory/?item=<uuid>` | Opening/closing and stock movements |
@@ -50,3 +51,5 @@ Errors contain `error`, usually `field`, and a support `reference_id`. Authentic
 Account recovery uses HTML forms at `/security/`, `/password-reset/` and `/password-reset/confirm/<uidb64>/<token>/`, with CSRF protection. Password change requires the current password; reset requires a single-use emailed token. See [operations](OPERATIONS.md) for canonical origin, mail and throttle configuration.
 
 Ledger and inventory accept `q` (full voucher number, narration or type), `sort=oldest|newest`, and `direction`. Ledger directions are `debit|credit`; inventory directions are `inward|outward`. These filters change visible rows/count and CSV contents; period opening/closing and ledger debit/credit totals always cover the full period. Inventory row balances remain their historical calculation balances. Ledger CSV balances include intervening hidden entries, even when exported newest first, and identifies the full-period closing balance separately. CSV metadata and audit events retain the selected filters. Ledger export requires the complete period to contain at most 5,000 entries so full running balances remain bounded.
+
+Company contact fields are edited through the CSRF-protected HTML form at `/company/`. Bootstrap includes subscription status, plan, start/expiry dates and `can_write`. Inactive subscriptions reject master creation and new posting/edit/reversal with 403; read/export access and already committed idempotent retries remain available. Product administration at `/admin/` requires an active superuser. All administrator logins reuse the shared rate-limited `/login/` flow. Production self-signup defaults off. See [client demo](CLIENT_DEMO.md) for provider setup and manual renewals.

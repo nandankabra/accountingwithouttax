@@ -18,6 +18,8 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.conf import settings
+from .subscriptions import ensure_can_write,access
 from .forms import SignupForm, LoginForm
 from .models import Workspace, Account, Item, Voucher, JournalEntry, StockMovement, AuditEvent
 from .engine import PostingError
@@ -32,6 +34,7 @@ def audit_auth(request, action, user):
 
 
 def auth_page(request, signup=False):
+    if signup and not settings.ALLOW_SELF_SIGNUP:return HttpResponse('Accounts are created by your service provider. Contact them for access.',status=403)
     if request.user.is_authenticated:
         return redirect('/')
     form = SignupForm(request.POST or None) if signup else LoginForm(request, data=request.POST or None)
@@ -73,6 +76,7 @@ def logout_page(request):
 
 @login_required
 def home(request):
+    if request.user.is_superuser:return redirect('/admin/')
     return render(request, 'books/app.html', {'workspace': request.user.workspace})
 
 
@@ -91,6 +95,8 @@ def api(methods=('GET',)):
                     if not isinstance(request.payload, dict):
                         raise PostingError('Send a JSON object.')
                 return fn(request, *args, **kwargs)
+            except Workspace.DoesNotExist:
+                return JsonResponse({'error':'Use product administration to manage customers.'},status=403)
             except (json.JSONDecodeError, UnicodeDecodeError):
                 return JsonResponse({'error': 'Invalid JSON.', 'reference_id': request.reference_id}, status=400)
             except PostingError as exc:
@@ -139,7 +145,7 @@ def bootstrap(request):
     ws = request.workspace
     accounts=Account.objects.filter(workspace=ws).order_by('name','id')
     items=Item.objects.filter(workspace=ws).order_by('name','id')
-    return JsonResponse({'workspace': {'id': str(ws.id), 'name': ws.name, 'timezone': ws.timezone}, 'user': request.user.username, 'today': timezone.localdate().isoformat(), 'accounts': list(accounts.values('id','name','kind','code')[:25]), 'items': list(items.values('id','name','unit')[:25]), 'default_cash':accounts.filter(kind='cash').values('id','name','kind','code').first()})
+    return JsonResponse({'workspace': {'id': str(ws.id), 'name': ws.name, 'timezone': ws.timezone}, 'user': request.user.username, 'today': timezone.localdate().isoformat(), 'accounts': list(accounts.values('id','name','kind','code')[:25]), 'items': list(items.values('id','name','unit')[:25]), 'subscription':access(ws),'default_cash':accounts.filter(kind='cash').values('id','name','kind','code').first()})
 
 
 def master_list(request,collection):
@@ -180,6 +186,7 @@ def master_create(request, collection):
         raise PostingError('Enter a name with 1 to 120 characters.', 'name')
     with transaction.atomic():
         ws = Workspace.objects.select_for_update().get(pk=request.workspace.pk)
+        ensure_can_write(ws)
         if collection == 'accounts':
             kind = data.get('kind')
             if kind not in dict(Account.KINDS):
@@ -246,7 +253,6 @@ def voucher_detail(request, voucher_id, action=None):
     v = owned_id(voucher_id, Voucher, request.workspace, 'voucher')
     result = serialize(v)
     result['reversed'] = Voucher.objects.filter(reverses=v).exists()
-    result['history'] = list(v.revisions.order_by('-version').values('version','data','reason','created_at','actor__username'))
     result['journal'] = list(JournalEntry.objects.filter(run_id=request.workspace.active_run_id,voucher=v).values('account__name','debit','credit'))
     return JsonResponse(result)
 

@@ -8,9 +8,21 @@ class Workspace(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     name = models.CharField(max_length=120)
+    mobile = models.CharField(max_length=20,blank=True)
+    address = models.TextField(max_length=600,blank=True)
+    email = models.EmailField(blank=True)
+    city = models.CharField(max_length=80,blank=True)
+    postcode = models.CharField(max_length=12,blank=True)
+    profile_version = models.PositiveIntegerField(default=1)
     timezone = models.CharField(max_length=60, default='Asia/Kolkata')
     active_run = models.ForeignKey('CalculationRun', null=True, on_delete=models.PROTECT, related_name='+')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name='Customer company'
+        verbose_name_plural='Customer companies'
+
+    def __str__(self):return self.name
 
 
 class Account(models.Model):
@@ -125,3 +137,34 @@ class AuthThrottle(models.Model):
     key = models.CharField(primary_key=True,max_length=64)
     window_start = models.DateTimeField()
     attempts = models.PositiveIntegerField(default=0)
+
+
+class SubscriptionPlan(models.Model):
+    name=models.CharField(max_length=80,unique=True)
+    price=models.DecimalField(max_digits=10,decimal_places=2,default=0)
+    duration_days=models.PositiveIntegerField(default=30)
+    active=models.BooleanField(default=True)
+
+    class Meta:
+        constraints=[models.CheckConstraint(condition=Q(price__gte=0,duration_days__gte=1),name='valid_plan_terms')]
+
+    def __str__(self):return self.name
+
+
+class Subscription(models.Model):
+    workspace=models.OneToOneField(Workspace,on_delete=models.PROTECT,related_name='subscription')
+    plan=models.ForeignKey(SubscriptionPlan,null=True,blank=True,on_delete=models.PROTECT)
+    status=models.CharField(max_length=12,choices=[('trial','Trial'),('active','Active'),('suspended','Suspended')],default='trial')
+    starts_on=models.DateField()
+    expires_on=models.DateField()
+    notes=models.CharField(max_length=500,blank=True)
+    requires_activation=models.BooleanField(default=False)
+    key_digest=models.CharField(max_length=64,unique=True,null=True,blank=True,editable=False)
+    key_enabled=models.BooleanField(default=False)
+    key_version=models.PositiveIntegerField(default=0,editable=False)
+    activated_at=models.DateTimeField(null=True,blank=True,editable=False)
+
+    class Meta:
+        constraints=[models.CheckConstraint(condition=Q(status__in=['trial','active','suspended']),name='valid_subscription_status'),models.CheckConstraint(condition=Q(expires_on__gte=models.F('starts_on')),name='valid_subscription_period')]
+
+    def __str__(self):return self.workspace.name

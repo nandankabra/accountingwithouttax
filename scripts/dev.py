@@ -36,8 +36,8 @@ if not (venv / 'bin/python').exists():
     run([sys.executable, '-m', 'venv', venv])
 python = venv / 'bin/python'
 stamp = venv / '.dependencies-installed'
-if not stamp.exists() or stamp.stat().st_mtime < (ROOT / 'requirements.txt').stat().st_mtime:
-    run([python, '-m', 'pip', 'install', '-r', 'requirements.txt'])
+if not stamp.exists() or stamp.stat().st_mtime < max((ROOT / name).stat().st_mtime for name in ['requirements.txt','requirements-dev.txt']):
+    run([python, '-m', 'pip', 'install', '-r', 'requirements-dev.txt'])
     stamp.touch()
 database = runtime / 'postgres'
 if not (database / 'PG_VERSION').exists():

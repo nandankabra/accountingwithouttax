@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 staticfiles/
 *.sqlite3
+desktop/node_modules/
+output/
+tmp/

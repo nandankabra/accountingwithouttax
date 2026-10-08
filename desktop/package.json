@@ -1,0 +1,57 @@
+{
+  "name": "simplebooks-desktop",
+  "version": "0.3.0",
+  "description": "Simple Books desktop client for the shared accounting server",
+  "author": "Simple Books",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "node start.cjs",
+    "test": "node --test policy.test.cjs",
+    "build:win": "electron-builder --win nsis --x64",
+    "build:mac": "electron-builder --mac dmg --arm64 --x64"
+  },
+  "build": {
+    "appId": "in.simplebooks.desktop",
+    "productName": "Simple Books",
+    "directories": {
+      "output": "../output/desktop"
+    },
+    "files": [
+      "main.cjs",
+      "policy.cjs",
+      "setup.html",
+      "setup.cjs",
+      "setup.css",
+      "package.json",
+      "assets/icon.png",
+      "preload.cjs"
+    ],
+    "win": {
+      "target": "nsis",
+      "signExecutable": false,
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "SimpleBooks-Setup-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.finance",
+      "target": "dmg",
+      "identity": null,
+      "icon": "assets/icon.png",
+      "artifactName": "SimpleBooks-${version}-${arch}.${ext}"
+    },
+    "toolsets": {
+      "nsis": "1.2.1"
+    }
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  }
+}

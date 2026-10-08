@@ -15,6 +15,12 @@ class RequestMiddleware:
     def __call__(self, request):
         request.reference_id = uuid.uuid4().hex[:12]
         start = time.monotonic()
+        version=request.session.get('subscription_key_version')
+        if request.user.is_authenticated and version is not None:
+            from django.contrib.auth import logout
+            from .models import Subscription
+            subscription=Subscription.objects.filter(workspace__owner=request.user).first()
+            if not subscription or not subscription.key_enabled or subscription.key_version!=version:logout(request)
         response = self.get_response(request)
         response['X-Request-ID'] = request.reference_id
         response['X-Frame-Options'] = 'DENY'

@@ -8,7 +8,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.db import connection, connections, close_old_connections, transaction, DatabaseError
 from django.db.models import Sum
-from django.test import TestCase, TransactionTestCase, Client
+from django.test import TestCase, TransactionTestCase, Client, override_settings
 from .engine import PostingError, money
 from .models import Account, Item, Voucher, JournalEntry, StockMovement, VoucherRevision, AuditEvent, CalculationRun, Mutation
 from .services import create_workspace, mutate
@@ -272,6 +272,7 @@ class ApiTests(Fixtures, TestCase):
         self.assertIn("frame-ancestors 'none'",response['Content-Security-Policy'])
         self.assertEqual(self.client.get('/api/dashboard/',{'start':'bad'}).status_code,400)
 
+    @override_settings(ALLOW_SELF_SIGNUP=True)
     def test_signin_signout_and_signup(self):
         self.client.logout()
         self.assertEqual(self.client.get('/signup/').status_code,200)

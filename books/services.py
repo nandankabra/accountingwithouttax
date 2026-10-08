@@ -1,10 +1,11 @@
 import hashlib
 import json
 import uuid
-from datetime import date
+from datetime import date, timedelta
+from django.utils import timezone
 from django.db import transaction
 from django.db.models import Max, Case, When, Value, IntegerField
-from .models import Account, Item, Workspace, Voucher, VoucherRevision, CalculationRun, JournalEntry, StockMovement, Mutation, AuditEvent
+from .models import Account, Item, Workspace, Voucher, VoucherRevision, CalculationRun, JournalEntry, StockMovement, Mutation, AuditEvent, Subscription
 from .engine import PostingError, normalize, normalize_opening, replay
 
 SYSTEM_ACCOUNTS = [('inventory','Inventory','asset'), ('sales','Sales','income'), ('returns','Sales returns','income'), ('cogs','Cost of goods sold','expense'), ('rounding','Rounding adjustment','expense'), ('opening_equity','Opening balance equity','equity')]
@@ -16,6 +17,8 @@ def create_workspace(owner, name):
         owner.email=owner.username
         owner.save(update_fields=['email'])
     ws = Workspace.objects.create(owner=owner, name=name)
+    today=timezone.localdate()
+    Subscription.objects.create(workspace=ws,starts_on=today,expires_on=today+timedelta(days=14))
     for code, label, kind in SYSTEM_ACCOUNTS:
         Account.objects.create(workspace=ws, name=label, kind=kind, code=code)
     for label, kind in [('Cash','cash'), ('Bank','bank'), ('General expenses','expense')]:
@@ -51,6 +54,8 @@ def mutate(owner, payload, key, voucher_id=None, reverse=False):
         if prior.fingerprint != fingerprint:
             raise PostingError('This submission key was already used for different data. Review before submitting again.', status=409)
         return {'id': str(prior.voucher_id), 'version': prior.version, 'duplicate': True}
+    from .subscriptions import ensure_can_write
+    ensure_can_write(ws)
     reason = payload.get('reason','')
     if not isinstance(reason, str) or len(reason) > 500:
         raise PostingError('Use a reason of at most 500 characters.', 'reason')

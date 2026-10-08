@@ -1,10 +1,10 @@
 # Verification — updated 8 October 2026
 
-Environment: macOS, Python 3.14.4, Django 5.2.18, psycopg 3.3.6, dedicated local PostgreSQL cluster. All data used for review is synthetic.
+Environment: macOS, Python 3.14.4, Django 5.2.18, psycopg 3.3.6, dedicated local PostgreSQL cluster. Automated tests and PDF layout fixtures are synthetic; existing demo books may also contain later owner-entered records.
 
 ## Automated evidence
 
-`python manage.py test books --noinput`: **53 tests passed**.
+`python manage.py test books --noinput`: **66 tests passed**.
 
 Covered scenarios:
 
@@ -59,7 +59,7 @@ Chrome on macOS, default desktop viewport and a 390 × 844 mobile viewport:
 - Checked filtered ledger at 390 pixels: document width 390, table width 356; restored normal viewport and left the synthetic demo open.
 - Client asset hashes now change on CSS/JS updates so a cached older client is not loaded after a correction.
 
-The demo now includes these test transactions and their history; it is not intended as real business data.
+The initial demo and agent test transactions are synthetic. Preserve later owner-entered records and treat the workspace as private.
 
 ## Encrypted backup and restore
 
@@ -93,4 +93,21 @@ The active-user counter includes arrivals waiting on the ramp/think timer. The s
 
 ## Not verified
 
-Native binaries; physical Android/iOS and Windows; latest-two-version browser matrix; representative-history or sustained production capacity; off-host WAL/PITR and production RPO/RTO; real SMTP and alert delivery; monthly availability; external security/dependency audit; full accessibility/usability acceptance. Owner approval of unresolved accounting/export/retention defaults remains outstanding. No statement of complete NFR compliance is made.
+Windows execution/installation/signing and physical Android/iOS; latest-two-version browser matrix; representative-history or sustained production capacity; off-host WAL/PITR and production RPO/RTO; real SMTP and alert delivery; monthly availability; external security review and unresolved desktop build-tool advisory; full accessibility/usability acceptance. Owner approval of unresolved accounting/export/retention defaults remains outstanding. No statement of complete NFR compliance is made.
+
+## Requested delivery features — 8 October 2026
+
+- 13 additional Django tests cover company update validation/isolation/stale versions, provider-only access, rate-limited provider login, password/account provisioning, subscription expiry/suspension/renewal/read access, private PDFs for all eight types, revision-list removal, escaped markup, 100-line PDF pagination and preservation of a newer financial run during provider profile saves.
+- `node --test desktop/policy.test.cjs`: two tests pass for allowed server origins and WhatsApp-only external links.
+- `scripts/verify.py` passes Django checks, migration drift, installed dependency consistency, client/desktop syntax, desktop policy tests and all 66 Django tests. Results are retained in private `.runtime/release-checks.json` and `.runtime/release-checks.log`.
+- Chrome review: owner voucher has PDF/WhatsApp actions and no revision list/version badge; PDF button downloaded PAY-000003; WhatsApp dialog shows editable text, optional recipient, native file-share control and invalid-phone error. No WhatsApp message was sent. Company form exposes all six editable contact fields. Provider home, customer-add form and plan/status/expiry controls render correctly.
+- Desktop development wrapper on macOS connected through its setup screen and signed into the existing demo. Windows x64 NSIS installer built successfully with branded executable metadata and icon. Package inventory contains only the desktop client files/icon, with no database, credentials or runtime node_modules. Source equality, x64 PE header and SHA-256 are checked; `output/desktop/release-manifest.json` retains evidence. The Windows installer itself was not executed.
+- All eight synthetic voucher layouts were rendered/reviewed, including a seven-page 100-line document with repeated headers and final totals. `scripts/preview_vouchers.py` creates these without database reads/writes; the combined sample is `output/pdf/simplebooks-voucher-demo.pdf`.
+- `pip-audit` on runtime requirements found three unique advisories in cryptography 48.0.1 (reported twice each). Upgraded/pinned cryptography 50.0.2, reran tests and repeated scan: no known vulnerabilities. Python PDF QA tools are in development requirements only.
+- `npm audit --omit=dev`: no findings. Full npm audit: eight moderate affected development entries caused by the unpatched `sprintf-js` precision-specifier denial-of-service advisory. These build packages are not shipped inside the desktop client. This npm scan does not assess bundled Electron/Chromium security or replace independent review. No force/downgrade fix was applied.
+
+[Client demo guide](CLIENT_DEMO.md) and [delivery checklist](RELEASE_CHECKLIST.md) identify Windows, hosting, real-message delivery, signing, performance and recovery gates. The full NFR report remains unaccepted for production.
+
+After the cryptography update, a new encrypted full backup was restored into a new local database on 8 October. All 23 public tables matched complete-row SHA-256 fingerprints and counts, including users, company profiles, plans and subscriptions. The source was unchanged during verification. The small fixture contained 17 vouchers, 19 revisions and 38 audit events; restore took 0.174 seconds. Evidence: `.runtime/delivery-restore-evidence.json`. This remains a local small-fixture drill, not production RPO/RTO evidence.
+
+The company form, provider home and WhatsApp dialog were reviewed at 390 × 844: document width was 390 pixels, and the sharing dialog width was 362 pixels. The default viewport was restored afterward.

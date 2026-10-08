@@ -16,10 +16,10 @@ if not SECRET_KEY:
         key_file.chmod(0o600)
     SECRET_KEY = key_file.read_text()
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1],testserver').split(',')
-INSTALLED_APPS = ['django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.staticfiles', 'books']
-MIDDLEWARE = ['django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware', 'books.middleware.RequestMiddleware']
+INSTALLED_APPS = ['django.contrib.auth', 'django.contrib.contenttypes', 'django.contrib.sessions', 'django.contrib.staticfiles','django.contrib.admin','django.contrib.messages', 'books']
+MIDDLEWARE = ['django.middleware.security.SecurityMiddleware', 'django.contrib.sessions.middleware.SessionMiddleware', 'django.middleware.common.CommonMiddleware', 'django.middleware.csrf.CsrfViewMiddleware', 'django.contrib.auth.middleware.AuthenticationMiddleware','django.contrib.messages.middleware.MessageMiddleware', 'django.middleware.clickjacking.XFrameOptionsMiddleware', 'books.middleware.RequestMiddleware']
 ROOT_URLCONF = 'config.urls'
-TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIRS': [], 'APP_DIRS': True, 'OPTIONS': {'context_processors': ['django.template.context_processors.request', 'django.contrib.auth.context_processors.auth','books.context_processors.assets']}}]
+TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIRS': [], 'APP_DIRS': True, 'OPTIONS': {'context_processors': ['django.template.context_processors.request', 'django.contrib.auth.context_processors.auth','books.context_processors.assets','django.contrib.messages.context_processors.messages']}}]
 WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql', 'NAME': os.getenv('PGDATABASE', 'simplebooks'), 'USER': os.getenv('PGUSER', ''), 'PASSWORD': os.getenv('PGPASSWORD', ''), 'HOST': os.getenv('PGHOST', str(BASE_DIR / '.runtime/socket')), 'PORT': os.getenv('PGPORT', '55439'), 'CONN_MAX_AGE': 60}}
 PASSWORD_HASHERS = ['django.contrib.auth.hashers.Argon2PasswordHasher']
@@ -61,3 +61,5 @@ EMAIL_HOST_PASSWORD=os.getenv('EMAIL_HOST_PASSWORD','')
 EMAIL_USE_TLS=True
 DEFAULT_FROM_EMAIL=os.getenv('DEFAULT_FROM_EMAIL','Simple Books <no-reply@example.test>')
 EMAIL_TIMEOUT=10
+
+ALLOW_SELF_SIGNUP=os.getenv('ALLOW_SELF_SIGNUP','0')=='1'

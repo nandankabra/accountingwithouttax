@@ -56,3 +56,15 @@ The replay implementation currently scans all vouchers and materializes all jour
 The local app needs no external services or cross-origin resources. Development recovery emails are written to a private local directory; production recovery requires configured SMTP. Password changes/reset invalidate other sessions. Reset tokens expire after 15 minutes and links use a configured canonical HTTPS origin. Authentication currently uses Django cookie sessions; native-client authentication will be designed with the native apps rather than treating this browser session contract as final.
 
 Implementation references: [Django transactions](https://docs.djangoproject.com/en/5.2/topics/db/transactions/), [Django 5.2 Python support](https://docs.djangoproject.com/en/5.2/releases/5.2/), [Django security](https://docs.djangoproject.com/en/5.2/topics/security/).
+
+## Company, provider access, subscriptions and sharing
+
+A provider is an active Django superuser; ordinary owners cannot enter provider administration, even with a staff flag. Customer creation atomically provisions a hashed-password owner, company, standard accounts and trial subscription. Provider login uses the same shared throttling as customer login. Public signup is disabled by default outside development.
+
+Company profile saves update only contact/name fields plus a profile version while locking the workspace. Owner saves reject stale profile versions. Provider saves also retain the current financial-run pointer, so changing contact details cannot roll financial reports back to an older run. Company/subscription changes create append-only audit events.
+
+Subscription starts/expiry are inclusive organisation-local dates. Trial/active subscriptions permit writes only within their date window; suspended subscriptions do not. Posting/master creation checks the subscription under the workspace lock, which subscription administration also acquires. Committed idempotent retries remain readable after expiry. Existing workspaces receive a 30-day trial in migration 0007; new workspaces receive a 14-day trial. Renewals are administrator-managed and payments are collected separately. Plan prices/durations are descriptive metadata.
+
+Voucher PDFs are authenticated, private downloads with bounded referenced-master lookups. They include contacts, party/items/totals/status and references; internal accounting-cost lines are omitted from the shared document. Stored revisions remain protected while the voucher detail API/UI omit their list. WhatsApp messages are reviewed before handoff; files use native sharing where supported or manual attachment. No public voucher links or automatic messages are created.
+
+The Windows Electron client shares this session-authenticated service. Its renderer has no Node access, is sandboxed/isolated and cannot navigate or redirect to other origins. Only HTTPS WhatsApp handoffs open externally. The configured server must use HTTPS, except same-PC loopback HTTP demonstrations. Credentials and financial databases are excluded from the package.
