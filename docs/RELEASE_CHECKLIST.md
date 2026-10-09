@@ -31,3 +31,16 @@ For Windows acceptance use a separate demo customer with synthetic records. Reco
 Automatic subscription billing and offline accounting are outside the implemented baseline. Prices, expiry dates and renewals are managed by the provider; the executable uses the shared accounting service. If either alternative is selected, its implementation and acceptance tests become additional release gates.
 
 Version 0.3.0 removes client badges and adds provider-issued subscription-key activation. New customers remain suspended until the provider activates dates and issues a key. Key expiry/renewal/revocation are tested. The shared public HTTPS server/domain is still missing, so activation from a separate client computer is not yet ready.
+
+## Standalone Windows 0.4.0 acceptance — still requires a Windows PC
+
+- [ ] Install the 0.4.0 local EXE on a clean Windows 10/11 x64 profile without Python/PostgreSQL; launch from shortcut.
+- [ ] Obtain an SB2 key for its installation ID, disconnect the network, activate, and verify an empty company.
+- [ ] Create accounts/items/opening stock; post all voucher types, correct a voucher, and verify ledger/stock totals and negative-stock blocking.
+- [ ] Update company details; download PDFs and CSVs. With internet restored, open WhatsApp and attach a PDF.
+- [ ] Close/reopen the app and verify persisted data; open a second instance and confirm only one local engine/window.
+- [ ] Save/overwrite a backup, post another voucher, restore the earlier backup, and verify the automatic before-restore copy.
+- [ ] Test a short licence at expiry: reads/PDFs remain, writes fail; paste a renewal key for the same ID and verify no data loss.
+- [ ] Reject an altered key, wrong-installation key, old renewal, damaged backup and ordinary browser/network access to the local service.
+- [ ] Uninstall/reinstall or upgrade and verify preserved profile data/installation ID. Close the app and verify the local service terminates.
+- [ ] Verify publisher signing/trusted distribution before client rollout. No Windows runtime/signing acceptance was claimed by the Mac build.

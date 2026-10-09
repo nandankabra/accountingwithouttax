@@ -1,7 +1,7 @@
 {
   "name": "simplebooks-desktop",
-  "version": "0.3.0",
-  "description": "Simple Books desktop client for the shared accounting server",
+  "version": "0.4.0",
+  "description": "Standalone offline accounting for Windows",
   "author": "Simple Books",
   "main": "main.cjs",
   "private": true,
@@ -9,10 +9,10 @@
     "start": "node start.cjs",
     "test": "node --test policy.test.cjs",
     "build:win": "electron-builder --win nsis --x64",
-    "build:mac": "electron-builder --mac dmg --arm64 --x64"
+    "build:mac": "node -e \"throw new Error('Standalone packaging is Windows-only; previous 0.3.0 DMGs are server clients.')\""
   },
   "build": {
-    "appId": "in.simplebooks.desktop",
+    "appId": "in.simplebooks.local",
     "productName": "Simple Books",
     "directories": {
       "output": "../output/desktop"
@@ -25,19 +25,35 @@
       "setup.css",
       "package.json",
       "assets/icon.png",
-      "preload.cjs"
+      "preload.cjs",
+      "local_runtime.cjs"
     ],
     "win": {
       "target": "nsis",
       "signExecutable": false,
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        {
+          "from": "../tmp/windows-local/python",
+          "to": "python"
+        },
+        {
+          "from": "../tmp/windows-local/backend",
+          "to": "backend"
+        },
+        {
+          "from": "../tmp/windows-local/runtime-manifest.json",
+          "to": "runtime-manifest.json"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "artifactName": "SimpleBooks-Setup-${version}-${arch}.${ext}"
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "SimpleBooks-Local-Setup-${version}-${arch}.${ext}"
     },
     "mac": {
       "category": "public.app-category.finance",
@@ -48,6 +64,14 @@
     },
     "toolsets": {
       "nsis": "1.2.1"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "enableCookieEncryption": true
     }
   },
   "devDependencies": {

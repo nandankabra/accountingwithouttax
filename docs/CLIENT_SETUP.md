@@ -1,20 +1,19 @@
-# Install Simple Books 0.3.0
+# Install Simple Books Local 0.4.0 on Windows
 
-1. Install the package for your computer:
-   - Apple Silicon Mac (M1/M2/M3/M4 and later): SimpleBooks-0.3.0-arm64.dmg.
-   - Intel Mac: SimpleBooks-0.3.0-x64.dmg.
-   - Windows x64: SimpleBooks-Setup-0.3.0-x64.exe.
-2. On Mac, open the DMG and drag Simple Books into Applications. On Windows, run the installer and select the installation directory.
-3. Launch Simple Books. Paste the subscription key provided privately by your administrator and select Activate & open books.
-4. Keep the key private. It gives access to your company's account. Your administrator manages activation, renewal, expiry and key replacement.
-5. An internet connection is required. If the server cannot be reached, contact your administrator. Your saved company records stay on the accounting server.
+1. Run `SimpleBooks-Local-Setup-0.4.0-x64.exe` on Windows 10/11 x64 and choose the installation directory. Python/PostgreSQL are not required separately.
+2. Launch Simple Books from the desktop shortcut. Copy the **Installation ID** and send it privately to your provider.
+3. Paste the provider's **offline Windows key** (begins `SB2.`) and choose **Activate & open books**. The previous connected-server `SB1.` keys do not work with this edition.
+4. Your company starts empty. Add accounts/items, opening balances and vouchers. Edit name/mobile/address under **Company details**.
+5. Use the PDF and WhatsApp buttons on voucher details. PDFs work offline; WhatsApp needs internet and may require manually attaching the downloaded PDF.
 
-The key contains the server address. No company data or keys are preinstalled. Your company begins with empty books; add accounts/items and opening balances before posting vouchers.
+Your books remain on this PC. You can close the provider's admin server and disconnect the network after receiving a key. No Mac/server needs to stay running. This edition supports one company/owner per Windows profile and is not a multi-PC shared database.
 
-After subscription expiry, new posting and master creation are blocked. Existing authenticated access can read and export retained records. Ask your administrator to renew and reload the application. No reinstall is needed for renewal.
+Renewal: ask the provider to issue a new key for the same Installation ID with the new expiry. Choose **Simple Books → Enter / renew subscription key** and paste it. Existing books and company edits remain. **Open saved books** returns to retained books without replacing a key. Expiry blocks posting, edits and master creation, while reading/PDF/CSV export remain available.
 
-If your session expires, select Activate subscription key on the sign-in screen, or Enter subscription key in the application menu. Account/password sign-in and password recovery are also available.
+**Backups:** choose **Simple Books → Back up company…** and save the `.sqlite3` file to another drive. Save a copy of `installation.json` from **Open local data folder** too. **Restore company backup…** checks the file and saves a copy of the current database before replacement. Restoring on another installation requires a matching renewal/replacement key from the provider. Database backups contain posted records; unposted browser drafts are not included. Do not copy a live database file manually.
 
-These packages were built locally. They are not publisher-signed/notarized; Windows installation and publisher acceptance still require verification. Do not disable OS or certificate protections. Your provider must arrange trusted distribution before client rollout.
+Data is under `%APPDATA%\SimpleBooksLocal`. Uninstalling/updating preserves it. The database is not encrypted; Windows account/file permissions protect local access. Startup keeps thirty recent snapshots, which do not replace off-device backups. Set the PC date correctly: a detected backward date change blocks writes/activation. Offline expiry cannot resist an administrator who modifies software, restores older data or changes the machine clock; it does not provide online revocation.
 
-Administration instructions are in docs/ADMINISTRATION.md and are for the provider only.
+This installer is unsigned. Automated accounting/licensing checks and local desktop tests were performed on Mac; actual Windows installation, runtime and uninstall/upgrade acceptance must be performed before declaring the release fully Windows-tested. See the release acceptance checklist.
+
+Provider administration is separate from the installed customer app; see `docs/ADMINISTRATION.md`.

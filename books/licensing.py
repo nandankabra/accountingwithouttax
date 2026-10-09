@@ -59,6 +59,9 @@ def issue_key(subscription,operator):
 
 
 def activate(request,value):
+    if getattr(settings, 'LOCAL_DESKTOP', False):
+        from .offline_licensing import activate_offline
+        return activate_offline(request, value)
     if isinstance(value,str):value=value.strip()
     origin,digest=decode_key(value)
     if origin!=canonical_origin(settings.APP_PUBLIC_URL):raise ValueError('This key belongs to a different accounting server.')
@@ -81,7 +84,7 @@ def activate(request,value):
 
 
 class ActivationForm(forms.Form):
-    key=forms.CharField(label='Subscription key',max_length=2000,widget=forms.Textarea(attrs={'rows':4,'autocomplete':'off','spellcheck':'false'}))
+    key=forms.CharField(label='Subscription key',max_length=4000,widget=forms.Textarea(attrs={'rows':4,'autocomplete':'off','spellcheck':'false'}))
 
 
 def activation_page(request):

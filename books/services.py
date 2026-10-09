@@ -12,11 +12,11 @@ SYSTEM_ACCOUNTS = [('inventory','Inventory','asset'), ('sales','Sales','income')
 
 
 @transaction.atomic
-def create_workspace(owner, name):
+def create_workspace(owner, name, *, workspace_id=None):
     if not owner.email and '@' in owner.username:
         owner.email=owner.username
         owner.save(update_fields=['email'])
-    ws = Workspace.objects.create(owner=owner, name=name)
+    ws = Workspace.objects.create(owner=owner, name=name, **({'id': workspace_id} if workspace_id else {}))
     today=timezone.localdate()
     Subscription.objects.create(workspace=ws,starts_on=today,expires_on=today+timedelta(days=14))
     for code, label, kind in SYSTEM_ACCOUNTS:

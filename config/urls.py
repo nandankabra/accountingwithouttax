@@ -5,12 +5,14 @@ from books.admin import provider_site
 from books.company import company
 from books.pdf_export import voucher_pdf
 from books.licensing import activation_page,activation_api
+from books.local_desktop import resume
 
 urlpatterns = [
     path('admin/',provider_site.urls),
     path('company/',company),
     path('activate/',activation_page),
     path('api/activation/',activation_api),
+    path('api/local/resume/',resume),
     path('security/',account_views.ChangePassword.as_view()),
     path('password-reset/',account_views.RequestPasswordReset.as_view(),name='password_reset'),
     path('password-reset/sent/',account_views.reset_sent),

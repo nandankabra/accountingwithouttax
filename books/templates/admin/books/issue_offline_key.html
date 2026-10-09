@@ -1,0 +1,7 @@
+{% extends "admin/base_site.html" %}
+{% block content %}<h2>{{ subscription.workspace.name }}</h2><p>Starts {{ subscription.starts_on }} · Expires {{ subscription.expires_on }}</p>
+{% if error %}<p class="errornote">{{ error }}</p>{% endif %}
+{% if key %}<p>Send this signed key privately to the customer. It activates only the specified installation.</p><label for="offline-key">Offline subscription key</label><p><textarea id="offline-key" rows="8" cols="80" readonly spellcheck="false">{{ key }}</textarea></p>
+<p>Renewal: update the subscription dates and generate another key for the same installation ID. The customer enters the new key without losing company data.</p>
+{% else %}<p>Set the subscription to Active, save its dates, then copy the installation ID shown in the Windows app.</p><form method="post">{% csrf_token %}{{ form.as_p }}<input type="submit" value="Generate offline key"></form>{% endif %}
+<p>A standalone PC does not contact your server. Changes or suspension here cannot remotely revoke a key already issued; its signed expiry remains in force.</p><p><a href="{{ back_url }}">← Back to subscription</a></p>{% endblock %}

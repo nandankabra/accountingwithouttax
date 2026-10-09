@@ -8,4 +8,5 @@ function subscriptionKey(value){
   if(!packet||Object.keys(packet).sort().join(',')!=='origin,token'||typeof packet.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(packet.token))throw new Error('Enter a valid subscription key.');
   return {origin:serverOrigin(packet.origin),key:value};
 }
-module.exports={serverOrigin,whatsapp,subscriptionKey};
+function offlineKey(value){if(typeof value!=='string'||value.length>4000||!/^SB2\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{86}$/.test(value.trim()))throw Error('Enter the offline Windows subscription key supplied by your provider.');return value.trim();}
+module.exports={serverOrigin,whatsapp,subscriptionKey,offlineKey};

@@ -1,3 +1,4 @@
 -r requirements.txt
+-r desktop/requirements-local.txt
 pymupdf==1.28.2
 pypdf==6.19.0

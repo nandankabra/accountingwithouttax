@@ -13,4 +13,4 @@ def digest(js_modified,css_modified):
 
 
 def assets(request):
-    return {'asset_version':digest((ROOT/'app.js').stat().st_mtime_ns,(ROOT/'app.css').stat().st_mtime_ns),'development':settings.DEBUG,'allow_self_signup':settings.ALLOW_SELF_SIGNUP}
+    return {'asset_version':digest((ROOT/'app.js').stat().st_mtime_ns,(ROOT/'app.css').stat().st_mtime_ns),'development':settings.DEBUG,'allow_self_signup':settings.ALLOW_SELF_SIGNUP,'local_desktop':getattr(settings,'LOCAL_DESKTOP',False)}

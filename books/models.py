@@ -168,3 +168,10 @@ class Subscription(models.Model):
         constraints=[models.CheckConstraint(condition=Q(status__in=['trial','active','suspended']),name='valid_subscription_status'),models.CheckConstraint(condition=Q(expires_on__gte=models.F('starts_on')),name='valid_subscription_period')]
 
     def __str__(self):return self.workspace.name
+
+
+class OfflineLicense(models.Model):
+    """One signed, installation-bound licence for this standalone data file."""
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT)
+    signed_key = models.TextField()
+    last_seen_date = models.DateField()

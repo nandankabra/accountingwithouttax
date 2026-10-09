@@ -17,10 +17,13 @@ commands=[
     ['node','--check','books/static/books/app.js'],
     ['node','--check','desktop/main.cjs'],
     ['node','--check','desktop/start.cjs'],
+    ['node','--check','desktop/local_runtime.cjs'],
     ['node','--check','desktop/preload.cjs'],
     ['node','--check','desktop/setup.cjs'],
     ['node','--test','desktop/policy.test.cjs'],
     [sys.executable,'manage.py','test','books','--noinput'],
+    [sys.executable,'manage.py','test','books','--settings=config.sqlite_test_settings','--noinput'],
+    ['node','--test','desktop/local_runtime.test.cjs'],
 ]
 results=[]
 runtime=ROOT/'.runtime';runtime.mkdir(exist_ok=True)

@@ -4,6 +4,9 @@ TABLES = ('auditevent','voucherrevision','calculationrun','journalentry','stockm
 
 
 def install(apps, schema_editor):
+    # SQLite protection is installed after its table-rebuilding migrations.
+    if schema_editor.connection.vendor == 'sqlite':
+        return
     schema_editor.execute("""
         CREATE FUNCTION books_reject_history_change() RETURNS trigger AS $$
         BEGIN
@@ -39,6 +42,8 @@ def install(apps, schema_editor):
 
 
 def uninstall(apps, schema_editor):
+    if schema_editor.connection.vendor == 'sqlite':
+        return
     for table in TABLES:
         schema_editor.execute(f'DROP TRIGGER protect_history ON books_{table}')
     for table in ('journalentry','stockmovement'):

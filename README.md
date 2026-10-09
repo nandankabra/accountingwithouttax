@@ -2,7 +2,9 @@
 
 A local, responsive accounting app based on `Simple_Accounting_System_NFR_Report.md`. Built on Django 5.2, PostgreSQL, and browser JavaScript, with one authoritative posting service shared by its web screens and JSON endpoints.
 
-**This is a development build, not a production/NFR-compliant release.** No deployment or real financial data is required to review it. The source NFR report is preserved unchanged.
+The standalone Windows release is version 0.4.0. It includes its own accounting engine and local database; no Mac, PostgreSQL installation, network server or internet is needed for bookkeeping. Windows installation/runtime acceptance remains pending. The source NFR report is preserved unchanged; its hosted-service requirements are a separate scope.
+
+See [Windows local installation](docs/CLIENT_SETUP.md) and [provider licence administration](docs/ADMINISTRATION.md).
 
 ## Run locally
 
@@ -29,13 +31,29 @@ To stop the app, press Ctrl-C. To stop its database:
 pg_ctl -D .runtime/postgres stop
 ```
 
-For a Windows desktop demonstration see [client installation and activation instructions](docs/CLIENT_SETUP.md). For a Windows backend or an existing PostgreSQL instance, create a dedicated empty `simplebooks` database, set the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` environment variables, then create a virtual environment, install `requirements.txt`, and run `python manage.py migrate` and `python manage.py runserver 127.0.0.1:8017`. The `.env.example` documents configuration; it is not automatically loaded. Windows execution remains unverified.
+## Standalone Windows app
 
-## Subscription activation and installers
+Use `output/desktop/SimpleBooks-Local-Setup-0.4.0-x64.exe`. The installer includes Python, Django, the posting engine, PDF fonts and a SQLite database engine. Data is created in the current Windows user's `%APPDATA%\SimpleBooksLocal`; no customer data, credentials or provider signing key is bundled.
 
-Client installers are in `output/desktop`: Apple Silicon/Intel DMGs and Windows x64 EXE, version 0.3.0. They contain no embedded customer database, accounts or credentials. Clients paste a subscription key to connect and sign into their company. [Client setup](docs/CLIENT_SETUP.md) and [provider administration](docs/ADMINISTRATION.md) explain the process.
+The app starts a private service on an assigned loopback port retained across restarts to preserve local drafts and shuts it down on exit. A per-launch secret keeps ordinary browser tabs and other network devices out. Money is stored as integer paise and quantities as integer thousandths, with Decimal calculations and protected accounting history. Local writes use immediate transactions and a single request worker.
 
-Create customers in `/admin/`, activate their subscription dates and issue keys. Public signup is disabled by default. Keys require a reachable accounting server; configure the actual HTTPS `APP_PUBLIC_URL` before issuing remote-client keys. No public server was deployed by this work. Publisher signing, notarization and Windows acceptance remain open.
+Copy the installation ID shown at first launch. In the provider admin panel create the customer, save an active subscription with its start/expiry dates, then choose **Generate offline key for a Windows PC**. Enter the installation ID and send the signed `SB2` key privately. Renewal requires a new offline key for the same installation; it preserves the local books. Expired subscriptions retain read/export access and block posting/master creation. Remote suspension is unavailable offline.
+
+The provider signing key is `.runtime/offline-signing.pem` (or `SIMPLEBOOKS_SIGNING_KEY`). Back it up privately: losing/replacing it prevents renewing previously distributed installers. Never distribute it to clients. Public verification material is bundled in the installer.
+
+Accounting and PDFs work offline. WhatsApp opens the user's WhatsApp/browser and requires internet; PDF attachment is manual where the device share sheet is unavailable. The Simple Books menu provides company backup/restore and the local data folder. Startup also retains 30 recent database snapshots. Keep exported backups and installation.json on another drive.
+
+Build and verify on this Mac:
+
+```sh
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python scripts/build_windows_local.py --prepare-only
+.venv/bin/python scripts/verify.py
+.venv/bin/python scripts/build_windows_local.py
+node scripts/verify_windows_payload.cjs
+```
+
+The former 0.3.0 EXE and DMGs are connected-server clients and are not the standalone Windows release. Packages are unsigned; this Mac cannot verify execution of the Windows installer.
 
 ## Working now
 
@@ -44,7 +62,7 @@ Create customers in `/admin/`, activate their subscription dates and issue keys.
 - Provider-created customers with passwords; plan prices/durations, trial/active/suspended status and manual subscription expiry/renewal and provider-issued activation keys. Expired access retains reading and exports.
 - PDF download and WhatsApp review/share controls for all eight voucher types. File attachment uses the device share sheet where supported or manual attachment in WhatsApp.
 - Voucher detail omits revision-history lists; protected accounting history remains in the database.
-- Windows x64 EXE and Apple Silicon/Intel DMGs built for the connected desktop client; packaged Mac activation verified locally and Windows runtime acceptance pending.
+- Standalone Windows x64 installer with offline activation/renewal and local backup/restore; Windows runtime acceptance pending. Previous Mac DMGs remain connected clients.
 - Password change, single-use email reset links and shared PostgreSQL login/reset throttling. Development reset emails stay on this machine.
 - Dashboard with period summaries for all six voucher types; cash/bank, customer, supplier and stock balances.
 - Account and item creation, INR values, quantities to 3 decimal places.
@@ -58,7 +76,7 @@ Create customers in `/admin/`, activate their subscription dates and issue keys.
 - Paginated accounts/items and server-searchable selectors; drafts and corrections resolve selected masters beyond the first page.
 - Ledger, inventory and item-wise voucher CSV exports with period, organisation, user and generation metadata, capped at 5,000 rows.
 - Encrypted full-backup, authentication and safe restore tooling; daily Linux scheduling templates.
-- Browser-local voucher drafts and exact-payload retry after uncertain submissions. Posting requires a connection.
+- Browser-local voucher drafts and exact-payload retry after uncertain submissions. Standalone posting uses the bundled local service; the hosted edition requires a server connection.
 
 ## Validation
 

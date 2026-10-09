@@ -9,3 +9,7 @@ test('subscription keys carry a validated server and secret without exposing mal
   for(const packet of [{origin:'http://untrusted.example.com',token:'a'.repeat(43)},{origin:'https://user:password@books.example.com',token:'a'.repeat(43)},{origin:'https://books.example.com',token:'short'},{origin:'https://books.example.com',token:'a'.repeat(43),extra:true}])assert.throws(()=>subscriptionKey(key(packet)));
   for(const value of [null,{},'secret-invalid','SB1.!!!','SB1.e30','SB1.'+'a'.repeat(2000)])assert.throws(()=>subscriptionKey(value));
 });
+test('standalone keys cannot redirect activation to a remote server',()=>{
+  const {offlineKey}=require('./policy.cjs');const value='SB2.e30.'+'a'.repeat(86);assert.equal(offlineKey(' '+value+' '),value);
+  for(const key of ['SB1.remote','SB2.e30.short',null,{},'https://example.com',value+'.extra'])assert.throws(()=>offlineKey(key));
+});

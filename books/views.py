@@ -10,7 +10,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, connection
 from django.db.models import Sum, Q, DecimalField
 from django.db.models.functions import Cast
 from django.db.models.fields.json import KeyTextTransform
@@ -34,6 +34,8 @@ def audit_auth(request, action, user):
 
 
 def auth_page(request, signup=False):
+    if getattr(settings, 'LOCAL_DESKTOP', False):
+        return redirect('/' if request.user.is_authenticated else '/activate/')
     if signup and not settings.ALLOW_SELF_SIGNUP:return HttpResponse('Accounts are created by your service provider. Contact them for access.',status=403)
     if request.user.is_authenticated:
         return redirect('/')
@@ -209,15 +211,22 @@ def dashboard(request):
     query = Voucher.objects.filter(workspace=ws, date__range=(start,end))
     amount = Cast(KeyTextTransform('amount', 'data'), DecimalField(max_digits=18, decimal_places=2))
     totals = {k: Decimal('0') for k in ('PAY','REC','SAL','PUR','CN','DN')}
-    for row in query.exclude(kind__in=['REV','OPN']).values('kind').annotate(total=Sum(amount)):
-        totals[row['kind']] = row['total']
-    for row in query.filter(kind='REV').values('reverses__kind').annotate(total=Sum(amount)):
-        totals[row['reverses__kind']] -= row['total']
+    if connection.vendor == 'sqlite':
+        for row in query.exclude(kind='OPN').values('kind', 'data', 'reverses__kind').iterator():
+            if row['kind'] == 'REV':
+                totals[row['reverses__kind']] -= Decimal(row['data']['amount'])
+            else:
+                totals[row['kind']] += Decimal(row['data']['amount'])
+    else:
+        for row in query.exclude(kind__in=['REV','OPN']).values('kind').annotate(total=Sum(amount)):
+            totals[row['kind']] = row['total']
+        for row in query.filter(kind='REV').values('reverses__kind').annotate(total=Sum(amount)):
+            totals[row['reverses__kind']] -= row['total']
     entries = JournalEntry.objects.filter(run_id=ws.active_run_id, date__lte=end)
     def balance(kinds):
-        row = entries.filter(account__kind__in=kinds).aggregate(d=Sum('debit'),c=Sum('credit'))
+        row = decimal_totals(entries.filter(account__kind__in=kinds), d='debit', c='credit')
         return (row['d'] or 0) - (row['c'] or 0)
-    stock = StockMovement.objects.filter(run_id=ws.active_run_id, date__lte=end).aggregate(value=Sum('value'))['value'] or 0
+    stock = decimal_totals(StockMovement.objects.filter(run_id=ws.active_run_id, date__lte=end), value='value')['value'] or 0
     return JsonResponse({'totals':totals,'cash':balance(['cash','bank']), 'receivable':balance(['customer']), 'payable':-balance(['supplier']), 'stock_value':stock, 'voucher_count':query.count(), 'start':start,'end':end,'refreshed_at':timezone.now(), 'recent':[serialize(v) for v in query.order_by('-date','-created_at')[:8]]})
 
 
@@ -264,6 +273,17 @@ def opening(request):
     return JsonResponse({'voucher':serialize(voucher) if voucher else None})
 
 
+def decimal_totals(query, **fields):
+    if connection.vendor != 'sqlite':
+        return query.aggregate(**{name: Sum(field) for name, field in fields.items()})
+    # Python Decimal also avoids overflow of SQLite's 64-bit SUM accumulator.
+    totals = {name: Decimal('0') for name in fields}
+    for row in query.values_list(*fields.values()).iterator():
+        for name, value in zip(fields, row):
+            totals[name] += value
+    return totals
+
+
 def ledger_query(request):
     start,end = period(request)
     query = JournalEntry.objects.filter(run_id=request.workspace.active_run_id)
@@ -273,7 +293,7 @@ def ledger_query(request):
     else:
         account=owned_id(request.GET.get('account'),Account,request.workspace,'account')
         query=query.filter(account=account)
-    opening = query.filter(date__lt=start).aggregate(d=Sum('debit'),c=Sum('credit'))
+    opening = decimal_totals(query.filter(date__lt=start), d='debit', c='credit')
     opening = (opening['d'] or 0) - (opening['c'] or 0)
     return account,start,end,query,opening
 
@@ -282,7 +302,7 @@ def ledger_query(request):
 def ledger(request):
     account,start,end,query,opening = ledger_query(request)
     rows = query.filter(date__range=(start,end)).select_related('voucher','account').order_by('date','id')
-    totals = rows.aggregate(d=Sum('debit'),c=Sum('credit'))
+    totals = decimal_totals(rows, d='debit', c='credit')
     result = page_of(request, book_rows(request,rows), lambda r: {'id':r.id,'date':r.date,'voucher':str(r.voucher_id),'number':r.voucher.number,'account':r.account.name,'debit':r.debit,'credit':r.credit})
     result.update(opening=opening, debit=totals['d'] or 0, credit=totals['c'] or 0, closing=opening+(totals['d'] or 0)-(totals['c'] or 0), account=account.name)
     return JsonResponse(result)
@@ -320,8 +340,8 @@ def inventory_query(request):
     item = owned_id(request.GET.get('item'), Item, request.workspace, 'item')
     start,end = period(request)
     query = StockMovement.objects.filter(run_id=request.workspace.active_run_id,item=item)
-    opening = query.filter(date__lt=start).aggregate(quantity=Sum('quantity'),value=Sum('value'))
-    closing = query.filter(date__lte=end).aggregate(quantity=Sum('quantity'),value=Sum('value'))
+    opening = decimal_totals(query.filter(date__lt=start), quantity='quantity', value='value')
+    closing = decimal_totals(query.filter(date__lte=end), quantity='quantity', value='value')
     return item,start,end,query,{k:v or 0 for k,v in opening.items()},{k:v or 0 for k,v in closing.items()}
 
 

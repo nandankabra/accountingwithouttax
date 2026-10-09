@@ -37,3 +37,17 @@ The same key can activate multiple computers for the same company. Device-count 
 ## Distribution status
 
 Version 0.3.0 packages contain only the connected desktop application, icon and required Electron notices. No database, customer accounts, sample records, administrator credentials or subscription keys are embedded. Apple Silicon and Intel DMGs and Windows x64 EXE are built locally. Mac package activation is verified locally; Windows execution remains unverified. Packages are not signed with a trusted publisher certificate or notarized, so customer distribution still requires signing and platform acceptance.
+
+## Standalone Windows licences (0.4.0)
+
+The installed customer app runs entirely on its own PC. Your provider panel remains at <http://127.0.0.1:8017/admin/> on this Mac. Start it with `.venv/bin/python manage.py runserver 127.0.0.1:8017 --noreload` from the project directory. The existing operator account can sign in; do not send operator credentials to customers.
+
+1. Create a customer company and login in Customers, or select an existing customer. No provider vouchers are copied into the customer's installer.
+2. Open its Subscription, set Active/start/expiry, and save.
+3. Choose **Generate offline key for a Windows PC**, enter the Installation ID copied from that app, and generate the `SB2` key.
+4. Send the key privately to that customer. No server URL or network connection is needed for activation.
+5. For renewal, update dates and generate a new key for the same ID. The client enters it through the app's subscription menu. Issuing a newer key does not remotely invalidate already-issued offline keys. Suspension in this panel cannot revoke an offline key; its signed expiry applies.
+
+Back up `.runtime/offline-signing.pem` privately and preserve it across builds/machines. It is NOT included in client packages. `SIMPLEBOOKS_SIGNING_KEY` can select a private provider file. The installer embeds the matching public key; losing/replacing the signing key breaks renewals for existing installer trust roots.
+
+The default customer's local owner has no password and has no product-admin rights. App access is scoped to the current Windows profile and the private loopback service. Provider login passwords belong only to provider/hosted account management, not to the client's local data file.

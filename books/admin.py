@@ -108,9 +108,23 @@ class SubscriptionAdmin(admin.ModelAdmin):
     autocomplete_fields=['workspace']
     list_per_page=25
     list_select_related=['workspace','plan']
-    fields=['workspace','plan','status','starts_on','expires_on','notes','requires_activation','key_enabled','key_version','activated_at','activation_key_controls']
+    fields=['workspace','plan','status','starts_on','expires_on','notes','requires_activation','key_enabled','key_version','activated_at','activation_key_controls','offline_key_controls']
     def get_urls(self):
-        return [path('<int:object_id>/issue-key/',self.admin_site.admin_view(self.issue_key_view),name='books_subscription_issue_key')]+super().get_urls()
+        return [path('<int:object_id>/issue-offline-key/',self.admin_site.admin_view(self.issue_offline_key_view),name='books_subscription_issue_offline_key'),path('<int:object_id>/issue-key/',self.admin_site.admin_view(self.issue_key_view),name='books_subscription_issue_key')]+super().get_urls()
+    @admin.display(description='Standalone Windows subscription')
+    def offline_key_controls(self,obj):
+        return format_html('<a class="button" href="{}">Generate offline key for a Windows PC</a>',reverse('provider:books_subscription_issue_offline_key',args=[obj.pk]))
+    def issue_offline_key_view(self,request,object_id):
+        from .offline_licensing import issue_offline_key
+        obj=get_object_or_404(Subscription.objects.select_related('workspace'),pk=object_id)
+        class InstallationForm(forms.Form):
+            installation=forms.UUIDField(label='Installation ID from the customer’s app')
+        form=InstallationForm(request.POST or None)
+        key=None;error=None
+        if request.method=='POST' and form.is_valid():
+            try:key=issue_offline_key(obj,request.user,form.cleaned_data['installation'])
+            except ValueError as exc:error=str(exc)
+        return render(request,'admin/books/issue_offline_key.html',{**self.admin_site.each_context(request),'opts':self.model._meta,'title':'Offline Windows subscription key','subscription':obj,'form':form,'key':key,'error':error,'back_url':reverse('provider:books_subscription_change',args=[obj.pk])})
     @admin.display(description='Subscription key')
     def activation_key_controls(self,obj):
         return format_html('<a class="button" href="{}">Generate / replace subscription key</a>',reverse('provider:books_subscription_issue_key',args=[obj.pk]))
@@ -133,7 +147,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return field
     def has_add_permission(self,request):return False
     def has_delete_permission(self,request,obj=None):return False
-    def get_readonly_fields(self,request,obj=None):return ['workspace','requires_activation','key_version','activated_at','activation_key_controls']
+    def get_readonly_fields(self,request,obj=None):return ['workspace','requires_activation','key_version','activated_at','activation_key_controls','offline_key_controls']
     @transaction.atomic
     def save_model(self,request,obj,form,change):
         # Match the posting lock so suspension and new postings have a clear order.
