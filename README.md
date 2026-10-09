@@ -13,7 +13,15 @@ cd /Users/nandankabra/ondemand/accountingwithouttax
 /opt/homebrew/bin/python3 scripts/dev.py
 ```
 
-Open <http://127.0.0.1:8017/> and create a workspace. The script installs pinned dependencies, initializes a separate development database under `.runtime/postgres`, runs migrations, and starts Django. This cluster uses port 55439 on a private Unix socket only; it does not connect to or modify the existing PostgreSQL server on port 5432. `.runtime` is private to the local OS user and ignored by Git.
+Open <http://127.0.0.1:8017/> and sign in. Create customer companies through the provider administration panel. The script installs pinned dependencies, initializes a separate development database under `.runtime/postgres`, runs migrations, and starts Django. This cluster uses port 55439 on a private Unix socket only; it does not connect to or modify the existing PostgreSQL server on port 5432. `.runtime` is private to the local OS user and ignored by Git.
+
+For browser access from another device on the same LAN, replace the example IP below with this Mac's current network IP and start the server with an explicit host allowlist:
+
+```sh
+ALLOWED_HOSTS=localhost,127.0.0.1,192.168.1.44 /opt/homebrew/bin/python3 scripts/dev.py --host 0.0.0.0
+```
+
+Open `http://192.168.1.44:8017/` or `/admin/` from a device on that network. Keep the Mac awake and allow the application through the firewall if your organisation's policy permits. This is local-network browser access, not a public deployment. The desktop installers and remote subscription keys still require a reachable trusted HTTPS origin; LAN HTTP does not change that policy.
 
 To stop the app, press Ctrl-C. To stop its database:
 

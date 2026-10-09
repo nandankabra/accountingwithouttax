@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 """Bootstrap a private, Unix-socket-only development PostgreSQL cluster."""
 import os
+import argparse
 from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
+
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--host',default='127.0.0.1',help='Listen address; use 0.0.0.0 for local-network access.')
+parser.add_argument('--port',type=int,default=8017)
+args=parser.parse_args()
+if not 1<=args.port<=65535:parser.error('Use a port from 1 to 65535.')
+if args.host not in ('127.0.0.1','localhost') and not os.getenv('ALLOWED_HOSTS'):
+    parser.error('Set ALLOWED_HOSTS to this machine\'s LAN IP before enabling network access.')
 
 ROOT = Path(__file__).resolve().parent.parent
 os.chdir(ROOT)
@@ -50,4 +59,4 @@ exists = run([pg('psql'), '-d','postgres','-Atc',"SELECT 1 FROM pg_database WHER
 if not exists:
     run([pg('createdb'),'simplebooks'])
 run([python,'manage.py','migrate'])
-os.execv(str(python),[str(python),'manage.py','runserver','127.0.0.1:8017'])
+os.execv(str(python),[str(python),'manage.py','runserver',f'{args.host}:{args.port}'])
