@@ -133,13 +133,13 @@ class SubscriptionAdmin(admin.ModelAdmin):
         return field
     def has_add_permission(self,request):return False
     def has_delete_permission(self,request,obj=None):return False
-    def get_readonly_fields(self,request,obj=None):return ['workspace','key_version','activated_at','activation_key_controls']
+    def get_readonly_fields(self,request,obj=None):return ['workspace','requires_activation','key_version','activated_at','activation_key_controls']
     @transaction.atomic
     def save_model(self,request,obj,form,change):
         # Match the posting lock so suspension and new postings have a clear order.
         Workspace.objects.select_for_update().get(pk=obj.workspace_id)
-        super().save_model(request,obj,form,change)
-        AuditEvent.objects.create(workspace=obj.workspace,actor=request.user,action='provider.subscription_updated',details={'status':obj.status,'plan':obj.plan_id,'starts_on':str(obj.starts_on),'expires_on':str(obj.expires_on),'notes':obj.notes})
+        obj.save(update_fields=['plan','status','starts_on','expires_on','notes','key_enabled'])
+        AuditEvent.objects.create(workspace=obj.workspace,actor=request.user,action='provider.subscription_updated',details={'status':obj.status,'plan':obj.plan_id,'starts_on':str(obj.starts_on),'expires_on':str(obj.expires_on),'key_enabled':obj.key_enabled,'notes':obj.notes})
 
 
 class ProviderUserAdmin(UserAdmin):

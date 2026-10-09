@@ -77,6 +77,7 @@ def logout_page(request):
 @login_required
 def home(request):
     if request.user.is_superuser:return redirect('/admin/')
+    if request.user.workspace.subscription.requires_activation and not access(request.user.workspace)['activated']:return redirect('/activate/')
     return render(request, 'books/app.html', {'workspace': request.user.workspace})
 
 

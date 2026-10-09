@@ -47,6 +47,7 @@ def issue_key(subscription,operator):
     origin=canonical_origin(settings.APP_PUBLIC_URL)
     Workspace.objects.select_for_update().get(pk=subscription.workspace_id)
     subscription=Subscription.objects.select_for_update().get(pk=subscription.pk)
+    if subscription.workspace.owner.is_superuser:raise ValueError('Subscription keys can only be issued for customer accounts.')
     if subscription.status not in ('active','trial') or subscription.expires_on<timezone.localdate():raise ValueError('Set an active subscription and future expiry before issuing a key.')
     token=secrets.token_urlsafe(32)
     subscription.key_digest=hashlib.sha256(token.encode()).hexdigest()
@@ -68,7 +69,7 @@ def activate(request,value):
         workspace=Workspace.objects.select_for_update().select_related('owner').get(pk=subscription.workspace_id)
         subscription=Subscription.objects.select_for_update().get(pk=subscription.pk)
         today=timezone.localdate()
-        if subscription.key_digest!=digest or not subscription.key_enabled or subscription.status not in ('active','trial') or not subscription.starts_on<=today<=subscription.expires_on or not workspace.owner.is_active:
+        if subscription.key_digest!=digest or not subscription.key_enabled or subscription.status not in ('active','trial') or not subscription.starts_on<=today<=subscription.expires_on or not workspace.owner.is_active or workspace.owner.is_superuser:
             raise ValueError('This subscription is inactive, not yet started or expired. Contact your administrator.')
         if subscription.activated_at is None:
             subscription.activated_at=timezone.now();subscription.save(update_fields=['activated_at'])

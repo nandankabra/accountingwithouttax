@@ -4,7 +4,7 @@ Environment: macOS, Python 3.14.4, Django 5.2.18, psycopg 3.3.6, dedicated local
 
 ## Automated evidence
 
-`python manage.py test books --noinput`: **66 tests passed**.
+`python manage.py test books --noinput`: **77 tests passed**.
 
 Covered scenarios:
 
@@ -106,8 +106,20 @@ Windows execution/installation/signing and physical Android/iOS; latest-two-vers
 - `pip-audit` on runtime requirements found three unique advisories in cryptography 48.0.1 (reported twice each). Upgraded/pinned cryptography 50.0.2, reran tests and repeated scan: no known vulnerabilities. Python PDF QA tools are in development requirements only.
 - `npm audit --omit=dev`: no findings. Full npm audit: eight moderate affected development entries caused by the unpatched `sprintf-js` precision-specifier denial-of-service advisory. These build packages are not shipped inside the desktop client. This npm scan does not assess bundled Electron/Chromium security or replace independent review. No force/downgrade fix was applied.
 
-[Client demo guide](CLIENT_DEMO.md) and [delivery checklist](RELEASE_CHECKLIST.md) identify Windows, hosting, real-message delivery, signing, performance and recovery gates. The full NFR report remains unaccepted for production.
+[Client demo guide](CLIENT_SETUP.md) and [delivery checklist](RELEASE_CHECKLIST.md) identify Windows, hosting, real-message delivery, signing, performance and recovery gates. The full NFR report remains unaccepted for production.
 
 After the cryptography update, a new encrypted full backup was restored into a new local database on 8 October. All 23 public tables matched complete-row SHA-256 fingerprints and counts, including users, company profiles, plans and subscriptions. The source was unchanged during verification. The small fixture contained 17 vouchers, 19 revisions and 38 audit events; restore took 0.174 seconds. Evidence: `.runtime/delivery-restore-evidence.json`. This remains a local small-fixture drill, not production RPO/RTO evidence.
 
 The company form, provider home and WhatsApp dialog were reviewed at 390 × 844: document width was 390 pixels, and the sharing dialog width was 362 pixels. The default viewport was restored afterward.
+
+## Subscription-key and installer milestone — version 0.3.0
+
+77 Django/PostgreSQL tests and three desktop policy tests pass. New tests cover digest-only keys, correct-account activation, invalid/malformed/foreign-origin keys, disabled owners, expiry/future starts/suspension/renewal, revocation of existing activated sessions, key replacement, CSRF/session rotation, throttling, provider-only issuance, concurrent administrator saves preserving newer keys, absence of client badges and prevention of key-based provider access. Public signup defaults to disabled; newly created customers are suspended until the provider sets active dates and issues a key.
+
+Windows x64 EXE and Apple Silicon/Intel DMGs were built at version 0.3.0. Both DMGs pass `hdiutil verify`. Package source equality and file inventories are checked; no database, keys, customer accounts or provider credentials are bundled. The Apple Silicon packaged app was launched locally and activated against an isolated PostgreSQL QA database, opening its correct empty company. Expiry displayed the inactive-subscription state; the automated tests separately confirm server write rejection. Renewal uses the same key. No existing customer financial records were changed for these checks.
+
+The app and activation screens omit development/demo badges. Existing owner-entered and historical records are retained on the existing local server and are not included in the client packages. The separate activation QA database/profile are private local testing resources.
+
+No hosted domain/server is configured for remote-client use. Keys issued with loopback origins cannot activate a separate client's PC against this Mac. Packages are unsigned/not notarized; trusted distribution and Windows execution/acceptance remain open. See [provider administration](ADMINISTRATION.md) and [client installation](CLIENT_SETUP.md).
+
+Packaged Mac renewal was also reviewed: after extending expiry in the isolated QA database, reloading restored active access with the same key. Both DMGs were mounted read-only and their embedded app.asar digests matched the corresponding verified packaged applications. The seeded company display suffix was removed from the existing local company; financial records and login accounts were preserved, with an audit event for the name change.

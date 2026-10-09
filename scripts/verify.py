@@ -17,6 +17,8 @@ commands=[
     ['node','--check','books/static/books/app.js'],
     ['node','--check','desktop/main.cjs'],
     ['node','--check','desktop/start.cjs'],
+    ['node','--check','desktop/preload.cjs'],
+    ['node','--check','desktop/setup.cjs'],
     ['node','--test','desktop/policy.test.cjs'],
     [sys.executable,'manage.py','test','books','--noinput'],
 ]

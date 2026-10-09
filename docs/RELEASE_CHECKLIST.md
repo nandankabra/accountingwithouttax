@@ -4,15 +4,15 @@ Current result: **demo features implemented; client production delivery remains 
 
 | Check | Evidence/status |
 |---|---|
-| Accounting, inventory, isolation, rollback, retries and concurrency regressions | 66 Django/PostgreSQL tests pass locally |
+| Accounting, inventory, isolation, rollback, retries and concurrency regressions | 77 Django/PostgreSQL tests pass locally |
 | PDF for all eight voucher types, private access, company data and escaped text | Automated tests pass; all eight synthetic layouts reviewed |
 | Long PDF pagination, repeated headers and rupee glyph | 100-line tests pass; seven-page synthetic layout reviewed |
 | Editable company contacts and concurrent update protection | Tests pass; browser form reviewed |
 | Provider access, strong customer passwords, customer provisioning | Tests pass; provider screens reviewed |
 | Subscription suspension, expiry, renewal, read/export access | Tests pass; provider dates/status screen reviewed |
 | Revision-history section removed | Current detail API and browser screen checked; database protections retained |
-| Windows installer packaging, x64 app, metadata, bundled source and digest | Built on Mac; release manifest records package contents |
-| Desktop server setup and sign-in | macOS development wrapper reviewed |
+| Windows EXE/Mac DMGs packaging, x64 app, metadata, bundled source and digest | Built on Mac; release manifest records package contents |
+| Desktop server setup and sign-in | Apple Silicon packaged app launched and activated against isolated QA server; both DMG checksums verified |
 | Encrypted local backup/restore after dependency update | All 23 tables match full-row fingerprints, including customer/subscription data; small fixture only |
 | Python runtime dependency audit | No known vulnerabilities after cryptography upgrade |
 | Desktop runtime npm dependency audit | No findings; app has no runtime npm dependency tree |
@@ -29,3 +29,5 @@ Current result: **demo features implemented; client production delivery remains 
 For Windows acceptance use a separate demo customer with synthetic records. Record Windows edition/build, installer SHA-256, server release/origin, browser/WhatsApp versions, observed totals, download names, screenshots and each outcome. Retest changed or failed scenarios; preserve any user-entered business data.
 
 Automatic subscription billing and offline accounting are outside the implemented baseline. Prices, expiry dates and renewals are managed by the provider; the executable uses the shared accounting service. If either alternative is selected, its implementation and acceptance tests become additional release gates.
+
+Version 0.3.0 removes client badges and adds provider-issued subscription-key activation. New customers remain suspended until the provider activates dates and issues a key. Key expiry/renewal/revocation are tested. The shared public HTTPS server/domain is still missing, so activation from a separate client computer is not yet ready.

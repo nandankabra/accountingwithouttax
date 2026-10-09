@@ -138,7 +138,10 @@ async function render() {
       const d=await api('/api/audit/?'+params());
       html=pageHead('A history you can follow.','Workspace activity, posting and corrections, preserved in order.',false)+`<section class="panel"><div class="table-wrap"><table><thead><tr><th>When</th><th>Action</th><th>Details</th><th class="hide-mobile">By</th></tr></thead><tbody>${d.rows.map(r=>`<tr><td>${esc(new Date(r.at).toLocaleString('en-IN'))}</td><td>${esc(r.action)}</td><td>${esc(r.details.number || r.details.name || r.details.reason || '—')}${r.details.reason?`<div class="help">${esc(r.details.reason)}</div>`:''}</td><td class="hide-mobile">${esc(r.actor)}</td></tr>`).join('')}</tbody></table></div>${pager(d)}</section>`;
     }
-    if(token===loadingToken) { $('#content').innerHTML=html; labelTables($('#content')); enhancePickers($('#content')); }
+    if(token===loadingToken) {
+      $('#content').innerHTML=html; labelTables($('#content')); enhancePickers($('#content'));
+      if(state.data.subscription&&!state.data.subscription.can_write)$('#content').querySelectorAll('[data-new],[data-master]').forEach(button=>{button.disabled=true;button.title='Contact your administrator to activate or renew your subscription.';});
+    }
   } catch(e) { message(e.message + (e.reference?` Reference: ${e.reference}`:''),true); }
 }
 function labelTables(root) { root.querySelectorAll('table').forEach(table=>{ const headings=Array.from(table.querySelectorAll('thead th')).map(th=>th.textContent); table.classList.add('responsive-table'); table.querySelectorAll('tbody tr').forEach(row=>Array.from(row.children).forEach((cell,i)=>{cell.dataset.label=headings[i]||'';})); }); }

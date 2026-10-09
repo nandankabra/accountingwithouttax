@@ -8,3 +8,5 @@ staticfiles/
 desktop/node_modules/
 output/
 tmp/
+
+.DS_Store

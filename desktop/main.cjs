@@ -2,7 +2,7 @@
 const {app,BrowserWindow,session,shell,dialog,Menu,ipcMain}=require('electron');
 const fs=require('node:fs');const path=require('node:path');const {pathToFileURL}=require('node:url');
 const {serverOrigin,whatsapp,subscriptionKey}=require('./policy.cjs');let window,origin;
-app.setName('Simple Books');app.setPath('userData',path.join(app.getPath('appData'),'SimpleBooks'));
+app.setName('Simple Books');app.setPath('userData',process.env.SIMPLEBOOKS_USER_DATA_DIR||path.join(app.getPath('appData'),'SimpleBooks'));
 app.setAppUserModelId('in.simplebooks.desktop');
 const configPath=()=>path.join(app.getPath('userData'),'server.json');
 function openServer(){window.loadURL(origin).catch(()=>{});}

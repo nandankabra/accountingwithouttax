@@ -1,4 +1,4 @@
-# Simple Books — accounting development build
+# Simple Books — subscription accounting
 
 A local, responsive accounting app based on `Simple_Accounting_System_NFR_Report.md`. Built on Django 5.2, PostgreSQL, and browser JavaScript, with one authoritative posting service shared by its web screens and JSON endpoints.
 
@@ -21,26 +21,22 @@ To stop the app, press Ctrl-C. To stop its database:
 pg_ctl -D .runtime/postgres stop
 ```
 
-For a Windows desktop demonstration see [client demo and installer instructions](docs/CLIENT_DEMO.md). For a Windows backend or an existing PostgreSQL instance, create a dedicated empty `simplebooks` database, set the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` environment variables, then create a virtual environment, install `requirements.txt`, and run `python manage.py migrate` and `python manage.py runserver 127.0.0.1:8017`. The `.env.example` documents configuration; it is not automatically loaded. Windows execution remains unverified.
+For a Windows desktop demonstration see [client installation and activation instructions](docs/CLIENT_SETUP.md). For a Windows backend or an existing PostgreSQL instance, create a dedicated empty `simplebooks` database, set the `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, and `PGPASSWORD` environment variables, then create a virtual environment, install `requirements.txt`, and run `python manage.py migrate` and `python manage.py runserver 127.0.0.1:8017`. The `.env.example` documents configuration; it is not automatically loaded. Windows execution remains unverified.
 
-## Try sample books
+## Subscription activation and installers
 
-```sh
-.venv/bin/python manage.py seed_demo
-```
+Client installers are in `output/desktop`: Apple Silicon/Intel DMGs and Windows x64 EXE, version 0.3.0. They contain no embedded customer database, accounts or credentials. Clients paste a subscription key to connect and sign into their company. [Client setup](docs/CLIENT_SETUP.md) and [provider administration](docs/ADMINISTRATION.md) explain the process.
 
-Choose a local password when prompted and sign in as `demo@example.test`. The command creates a clearly labelled synthetic business with accounts, items, all six voucher types, and traceable stock. It refuses to overwrite an existing user. Supply `--email another@example.test` to create another independent sample. It is disabled outside development.
-
-The browser opened during implementation is signed into this synthetic demo. Create a separate workspace for your own testing.
+Create customers in `/admin/`, activate their subscription dates and issue keys. Public signup is disabled by default. Keys require a reachable accounting server; configure the actual HTTPS `APP_PUBLIC_URL` before issuing remote-client keys. No public server was deployed by this work. Publisher signing, notarization and Windows acceptance remain open.
 
 ## Working now
 
-- One owner per company, provider administration, Argon2 hashing, session login/logout, CSRF protection, configurable idle expiry and workspace-scoped access.
+- One owner per company, provider administration, subscription-key activation, Argon2 hashing, session login/logout, CSRF protection, configurable idle expiry and workspace-scoped access.
 - Editable company name, mobile, company email, address, city and postal code; concurrent updates are checked.
-- Provider-created customers with passwords; plan prices/durations, trial/active/suspended status and manual subscription expiry/renewal. Expired access retains reading and exports.
+- Provider-created customers with passwords; plan prices/durations, trial/active/suspended status and manual subscription expiry/renewal and provider-issued activation keys. Expired access retains reading and exports.
 - PDF download and WhatsApp review/share controls for all eight voucher types. File attachment uses the device share sheet where supported or manual attachment in WhatsApp.
 - Voucher detail omits revision-history lists; protected accounting history remains in the database.
-- Windows x64 installer built locally for a connected desktop client; Windows runtime acceptance remains pending.
+- Windows x64 EXE and Apple Silicon/Intel DMGs built for the connected desktop client; packaged Mac activation verified locally and Windows runtime acceptance pending.
 - Password change, single-use email reset links and shared PostgreSQL login/reset throttling. Development reset emails stay on this machine.
 - Dashboard with period summaries for all six voucher types; cash/bank, customer, supplier and stock balances.
 - Account and item creation, INR values, quantities to 3 decimal places.
